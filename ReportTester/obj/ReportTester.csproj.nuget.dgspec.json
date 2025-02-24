@@ -1,0 +1,172 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportTester\\ReportTester.csproj": {}
+  },
+  "projects": {
+    "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj",
+        "projectName": "ReportGenerator.Core",
+        "projectPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj",
+        "packagesPath": "C:\\Users\\dorong\\.nuget\\packages\\",
+        "outputPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\dorong\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "BouncyCastle.Cryptography": {
+              "target": "Package",
+              "version": "[2.5.0, )"
+            },
+            "Dapper": {
+              "target": "Package",
+              "version": "[2.1.35, )"
+            },
+            "EPPlus": {
+              "target": "Package",
+              "version": "[7.5.3, )"
+            },
+            "Microsoft.Data.SqlClient": {
+              "target": "Package",
+              "version": "[6.0.1, )"
+            },
+            "itext7": {
+              "target": "Package",
+              "version": "[7.2.5, )"
+            },
+            "itext7.bouncy-castle-adapter": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "itext7.commons": {
+              "target": "Package",
+              "version": "[7.2.5, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.101/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportTester\\ReportTester.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportTester\\ReportTester.csproj",
+        "projectName": "ReportTester",
+        "projectPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportTester\\ReportTester.csproj",
+        "packagesPath": "C:\\Users\\dorong\\.nuget\\packages\\",
+        "outputPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportTester\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\dorong\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj": {
+                "projectPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.101/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
