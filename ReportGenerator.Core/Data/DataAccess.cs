@@ -61,26 +61,20 @@ namespace ReportGenerator.Core.Data
         }
 
         /// <summary>
-        /// בודק אם האובייקט הוא פונקציה טבלאית
+        /// בודק אם אובייקט SQL הוא פונקציה טבלאית
         /// </summary>
-        /// <param name="objectName">שם האובייקט</param>
+        /// <param name="objectName">שם האובייקט ב-SQL</param>
         /// <returns>האם האובייקט הוא פונקציה טבלאית</returns>
         public async Task<bool> IsTableFunction(string objectName)
         {
             using var connection = new SqlConnection(_connectionString);
+            var count = await connection.ExecuteScalarAsync<int>(
+                @"SELECT COUNT(1) FROM sys.objects 
+                  WHERE name = @Name
+                  AND type IN ('IF', 'TF', 'FT')",  // IF = inline function, TF = table function, FT = CLR table-function
+                new { Name = objectName.Replace("dbo.", "") });
             
-            // הסרת התחילית dbo. אם קיימת
-            string cleanName = objectName.StartsWith("dbo.") 
-                ? objectName.Substring(4) 
-                : objectName;
-            
-            var result = await connection.ExecuteScalarAsync<int>(
-                @"SELECT COUNT(*) FROM sys.objects 
-                  WHERE name = @Name 
-                  AND type IN ('IF', 'TF', 'FT')",  // סוגים שונים של פונקציות טבלאיות
-                new { Name = cleanName });
-            
-            return result > 0;
+            return count > 0;
         }
 
         /// <summary>
@@ -90,49 +84,99 @@ namespace ReportGenerator.Core.Data
         /// <returns>מילון עם המיפויים מאנגלית לעברית</returns>
         public async Task<Dictionary<string, string>> GetColumnMappings(string procNames)
         {
-            Dictionary<string, string> mappings = new();
-            
-            // פיצול שמות הפרוצדורות
-            var procNamesList = procNames.Split(';')
-                .Select(p => p.Trim())
-                .ToList();
+            Dictionary<string, string> mappings = new(StringComparer.OrdinalIgnoreCase);
             
             using var connection = new SqlConnection(_connectionString);
             
-            // מיפויים לפי שם פרוצדורה (לשדות מחושבים)
-            var procMappings = await connection.QueryAsync<ColumnMapping>(
-                @"SELECT TableName, ColumnName, HebrewAlias
+            // פיצול שמות הפרוצדורות/פונקציות
+            var procsList = procNames.Split(';')
+                                    .Select(p => p.Trim())
+                                    .Select(p => p.Replace("dbo.", ""))
+                                    .ToArray();
+            
+            // 1. קבלת מיפויים לשדות מטבלאות
+            var tableResults = await connection.QueryAsync<ColumnMapping>(
+                @"SELECT TableName, ColumnName, HebrewAlias 
+                  FROM ReportsGeneratorColumns 
+                  WHERE TableName IN (SELECT name FROM sys.tables)");
+
+            // 2. קבלת מיפויים ספציפיים לפרוצדורות
+            var procResults = await connection.QueryAsync<ColumnMapping>(
+                @"SELECT TableName, ColumnName, HebrewAlias 
                   FROM ReportsGeneratorColumns 
                   WHERE TableName IN @ProcNames",
-                new { ProcNames = procNamesList });
+                new { ProcNames = procsList });
             
-            // מיפויים לפי טבלה (לשדות מטבלה)
-            var tableMappings = await connection.QueryAsync<ColumnMapping>(
-                @"SELECT TableName, ColumnName, HebrewAlias
-                  FROM ReportsGeneratorColumns 
-                  WHERE TableName IN 
-                    (SELECT name FROM sys.tables)");
-            
-            // הוספת מיפויים לפי פרוצדורה (שדות מחושבים)
-            foreach (var mapping in procMappings)
+            // הוספת מיפויים לשדות מטבלאות - בפורמט TableName_ColumnName
+            foreach (var mapping in tableResults)
             {
-                // מיפוי ישיר לפי שם השדה
-                mappings[mapping.ColumnName] = mapping.HebrewAlias;
-            }
-            
-            // הוספת מיפויים לפי טבלה (שדות מטבלה)
-            foreach (var mapping in tableMappings)
-            {
-                // מיפוי בפורמט TableName_ColumnName
                 string key = $"{mapping.TableName}_{mapping.ColumnName}";
                 mappings[key] = mapping.HebrewAlias;
+            }
+            
+            // הוספת מיפויים ספציפיים לפרוצדורות - עבור שדות מחושבים
+            foreach (var mapping in procResults)
+            {
+                // שמירת מיפוי ישיר לשם השדה (לשדות מחושבים)
+                mappings[mapping.ColumnName] = mapping.HebrewAlias;
+                
+                // גם בפורמט ProcName_ColumnName (אופציונלי)
+                string compositeKey = $"{mapping.TableName}_{mapping.ColumnName}";
+                mappings[compositeKey] = mapping.HebrewAlias;
             }
             
             return mappings;
         }
 
         /// <summary>
-        /// הרצת פונקציה טבלאית וקבלת התוצאות
+        /// הרצת מספר פרוצדורות או פונקציות טבלאיות ומיזוג התוצאות
+        /// </summary>
+        /// <param name="objectNames">שמות הפרוצדורות/פונקציות (מופרדות בפסיק נקודה)</param>
+        /// <param name="parameters">פרמטרים להעברה לפרוצדורות</param>
+        /// <returns>מילון המכיל DataTable לכל פרוצדורה/פונקציה</returns>
+        public async Task<Dictionary<string, DataTable>> ExecuteMultipleStoredProcedures(
+            string objectNames, 
+            Dictionary<string, ParamValue> parameters)
+        {
+            var objects = objectNames.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            var result = new Dictionary<string, DataTable>();
+
+            foreach (var objectName in objects)
+            {
+                try
+                {
+                    string trimmedName = objectName.Trim();
+                    
+                    // בדיקה אם מדובר בפונקציה או בפרוצדורה
+                    bool isFunction = trimmedName.StartsWith("dbo.") || 
+                                     await IsTableFunction(trimmedName);
+                    
+                    DataTable data;
+                    if (isFunction)
+                    {
+                        // הרצת פונקציה טבלאית
+                        data = await ExecuteTableFunction(trimmedName, parameters);
+                    }
+                    else
+                    {
+                        // הרצת פרוצדורה רגילה
+                        data = await ExecuteStoredProcedure(trimmedName, parameters);
+                    }
+                    
+                    // הוספה למילון התוצאות
+                    result.Add(trimmedName, data);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Error executing {objectName}: {ex.Message}", ex);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// הרצת פונקציה טבלאית
         /// </summary>
         /// <param name="functionName">שם הפונקציה</param>
         /// <param name="parameters">פרמטרים</param>
@@ -141,8 +185,11 @@ namespace ReportGenerator.Core.Data
         {
             using var connection = new SqlConnection(_connectionString);
             
-            // בניית מחרוזת הפרמטרים
-            List<string> paramList = new List<string>();
+            // פתיחת החיבור
+            await connection.OpenAsync();
+            
+            // הכנת מחרוזת הפרמטרים
+            var paramList = new List<string>();
             foreach (var param in parameters)
             {
                 paramList.Add($"@{param.Key}");
@@ -150,71 +197,45 @@ namespace ReportGenerator.Core.Data
             
             string paramString = string.Join(", ", paramList);
             
-            // בניית פקודת SQL - שימוש בפונקציה כחלק מ-SELECT
-            string sql = $"SELECT * FROM {functionName}({paramString})";
+            // בניית פקודת SQL
+            string sql = string.IsNullOrEmpty(paramString) 
+                ? $"SELECT * FROM {functionName}()"
+                : $"SELECT * FROM {functionName}({paramString})";
             
-            // ביצוע השאילתה
-            var result = await connection.QueryAsync(
-                sql,
-                parameters.ToDictionary(
-                    kvp => kvp.Key, 
-                    kvp => kvp.Value.Value ?? DBNull.Value),
-                commandType: CommandType.Text);
+            // הכנת הפקודה
+            using var command = new SqlCommand(sql, connection);
             
-            return ToDataTable(result);
-        }
-
-        /// <summary>
-        /// הרצת מספר פרוצדורות מאוחסנות ו/או פונקציות טבלאיות
-        /// </summary>
-        /// <param name="storedProcNames">שמות הפרוצדורות/פונקציות (מופרדות בפסיק נקודה)</param>
-        /// <param name="parameters">פרמטרים להעברה</param>
-        /// <returns>מילון המכיל DataTable לכל פרוצדורה/פונקציה</returns>
-        public async Task<Dictionary<string, DataTable>> ExecuteMultipleStoredProcedures(
-            string storedProcNames, 
-            Dictionary<string, ParamValue> parameters)
-        {
-            var procNames = storedProcNames.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-            var result = new Dictionary<string, DataTable>();
-
-            foreach (var procName in procNames)
+            // הוספת פרמטרים
+            foreach (var param in parameters)
             {
-                string trimmedName = procName.Trim();
+                // המרה לסוג הפרמטר המתאים
+                SqlDbType sqlType = GetSqlDbType(param.Value.Type);
                 
-                try
+                var sqlParam = new SqlParameter($"@{param.Key}", sqlType)
                 {
-                    // בדיקה אם מדובר בפונקציה טבלאית או בפרוצדורה רגילה
-                    bool isFunction = trimmedName.StartsWith("dbo.") || 
-                                     await IsTableFunction(trimmedName);
-                    
-                    DataTable procData;
-                    if (isFunction)
-                    {
-                        // הרצת פונקציה טבלאית
-                        procData = await ExecuteTableFunction(trimmedName, parameters);
-                    }
-                    else
-                    {
-                        // הרצת פרוצדורה רגילה
-                        procData = await ExecuteStoredProcedure(trimmedName, parameters);
-                    }
-                    
-                    // הוספה למילון התוצאות
-                    result.Add(trimmedName, procData);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Error executing {trimmedName}: {ex.Message}", ex);
-                }
+                    Value = param.Value.Value ?? DBNull.Value
+                };
+                
+                command.Parameters.Add(sqlParam);
             }
-
-            return result;
+            
+            // הרצת הפקודה
+            using var reader = await command.ExecuteReaderAsync();
+            
+            // המרה ל-DataTable
+            var dataTable = new DataTable();
+            dataTable.Load(reader);
+            
+            return dataTable;
         }
 
         /// <summary>
         /// הרצת פרוצדורה מאוחסנת וקבלת התוצאות כטבלה
         /// </summary>
-        public async Task<DataTable> ExecuteStoredProcedure(string spName, Dictionary<string, ParamValue> parameters)
+        /// <param name="spName">שם הפרוצדורה</param>
+        /// <param name="parameters">פרמטרים</param>
+        /// <returns>טבלת נתונים עם התוצאות</returns>
+        private async Task<DataTable> ExecuteStoredProcedure(string spName, Dictionary<string, ParamValue> parameters)
         {
             using var connection = new SqlConnection(_connectionString);
 
@@ -233,6 +254,61 @@ namespace ReportGenerator.Core.Data
                 commandType: CommandType.StoredProcedure);
 
             return ToDataTable(result);
+        }
+
+        /// <summary>
+        /// מיזוג טבלאות נתונים
+        /// </summary>
+        private void MergeDataTables(DataTable mainTable, DataTable newData)
+        {
+            // אם הטבלה הראשית ריקה, נוסיף את כל העמודות
+            if (mainTable.Columns.Count == 0)
+            {
+                foreach (DataColumn col in newData.Columns)
+                {
+                    mainTable.Columns.Add(col.ColumnName, col.DataType);
+                }
+            }
+            // אם יש עמודות חדשות, נוסיף אותן
+            else
+            {
+                foreach (DataColumn col in newData.Columns)
+                {
+                    string columnName = col.ColumnName;
+                    if (!mainTable.Columns.Contains(columnName))
+                    {
+                        mainTable.Columns.Add(columnName, col.DataType);
+                    }
+                }
+            }
+
+            // העתקת כל השורות מהטבלה החדשה
+            foreach (DataRow newRow in newData.Rows)
+            {
+                var row = mainTable.NewRow();
+                foreach (DataColumn col in newData.Columns)
+                {
+                    string columnName = col.ColumnName;
+                    row[columnName] = newRow[columnName];
+                }
+                mainTable.Rows.Add(row);
+            }
+        }
+
+        /// <summary>
+        /// מציאת שם עמודה חלופי במקרה של התנגשות
+        /// </summary>
+        private string FindMatchingColumnName(DataTable table, string baseColumnName)
+        {
+            int suffix = 1;
+            string columnName = baseColumnName;
+
+            while (table.Columns.Contains(columnName))
+            {
+                columnName = $"{baseColumnName}_{++suffix}";
+            }
+
+            return columnName;
         }
 
         /// <summary>
@@ -264,6 +340,78 @@ namespace ReportGenerator.Core.Data
             }
 
             return dt;
+        }
+        
+        /// <summary>
+        /// המרה מ-DbType ל-SqlDbType
+        /// </summary>
+        private SqlDbType GetSqlDbType(DbType dbType)
+        {
+            return dbType switch
+            {
+                DbType.AnsiString => SqlDbType.VarChar,
+                DbType.AnsiStringFixedLength => SqlDbType.Char,
+                DbType.Binary => SqlDbType.VarBinary,
+                DbType.Boolean => SqlDbType.Bit,
+                DbType.Byte => SqlDbType.TinyInt,
+                DbType.Currency => SqlDbType.Money,
+                DbType.Date => SqlDbType.Date,
+                DbType.DateTime => SqlDbType.DateTime,
+                DbType.DateTime2 => SqlDbType.DateTime2,
+                DbType.DateTimeOffset => SqlDbType.DateTimeOffset,
+                DbType.Decimal => SqlDbType.Decimal,
+                DbType.Double => SqlDbType.Float,
+                DbType.Guid => SqlDbType.UniqueIdentifier,
+                DbType.Int16 => SqlDbType.SmallInt,
+                DbType.Int32 => SqlDbType.Int,
+                DbType.Int64 => SqlDbType.BigInt,
+                DbType.Object => SqlDbType.Variant,
+                DbType.SByte => SqlDbType.TinyInt,
+                DbType.Single => SqlDbType.Real,
+                DbType.String => SqlDbType.NVarChar,
+                DbType.StringFixedLength => SqlDbType.NChar,
+                DbType.Time => SqlDbType.Time,
+                DbType.UInt16 => SqlDbType.SmallInt,
+                DbType.UInt32 => SqlDbType.Int,
+                DbType.UInt64 => SqlDbType.BigInt,
+                DbType.VarNumeric => SqlDbType.Decimal,
+                DbType.Xml => SqlDbType.Xml,
+                _ => SqlDbType.NVarChar,
+            };
+        }
+    }
+
+    /// <summary>
+    /// מידע על פרמטר של פרוצדורה מאוחסנת
+    /// </summary>
+    public class ParameterInfo
+    {
+        public string Name { get; set; }
+        public string DataType { get; set; }
+        public string Mode { get; set; }
+        public string IsNullable { get; set; }
+        public string DefaultValue { get; set; }
+
+        public bool IsOptional => !string.IsNullOrEmpty(DefaultValue) || IsNullable == "YES";
+
+        public DbType GetDbType()
+        {
+            return DataType.ToLower() switch
+            {
+                "varchar" => DbType.String,
+                "nvarchar" => DbType.String,
+                "int" => DbType.Int32,
+                "decimal" => DbType.Decimal,
+                "datetime" => DbType.DateTime,
+                "bit" => DbType.Boolean,
+                "float" => DbType.Double,
+                "bigint" => DbType.Int64,
+                "smallint" => DbType.Int16,
+                "date" => DbType.Date,
+                "time" => DbType.Time,
+                "money" => DbType.Currency,
+                _ => DbType.String
+            };
         }
     }
 }
