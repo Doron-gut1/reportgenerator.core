@@ -7,13 +7,31 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Generators\SampleTemplate.html" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Generators\SampleTemplate.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.0" />
     <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <PackageReference Include="EPPlus" Version="7.5.3" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.59" />
     <PackageReference Include="itext7" Version="7.2.5" />
     <PackageReference Include="itext7.bouncy-castle-adapter" Version="9.0.0" />
     <PackageReference Include="itext7.commons" Version="7.2.5" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="arial.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
