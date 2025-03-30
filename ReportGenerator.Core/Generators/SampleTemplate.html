@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="he-IL" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ReportTitle}}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      margin: 20px;
+    }
+    
+    .report-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .report-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .report-subtitle {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    
+    .report-params {
+      background-color: #f8f8f8;
+      padding: 10px;
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    
+    .report-params p {
+      margin: 5px 0;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+    }
+    
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f8f8f8;
+    }
+    
+    .negative {
+      color: red;
+    }
+    
+    .page-footer {
+      text-align: center;
+      font-size: 12px;
+      border-top: 1px solid #ddd;
+      padding-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <div class="report-title">{{ReportTitle}}</div>
+    <div class="report-subtitle">דוח לדוגמה</div>
+  </div>
+  
+  <div class="report-params">
+    <p><strong>מתאריך:</strong> {{DateFrom}}</p>
+    <p><strong>עד תאריך:</strong> {{DateTo}}</p>
+  </div>
+  
+  <!-- דוגמה לטבלה עם מיפוי כותרות אוטומטי -->
+  <table>
+    <thead>
+      <tr>
+        <th>{{HEADER:CUSTOMER_ID}}</th>
+        <th>{{HEADER:CUSTOMER_NAME}}</th>
+        <th>{{HEADER:EMAIL}}</th>
+        <th>{{HEADER:PHONE}}</th>
+        <th>{{HEADER:BALANCE}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- הגדרת שורה דינמית שתשוכפל עבור כל לקוח -->
+      <tr data-table-row="Customers">
+        <td>{{CUSTOMER_ID}}</td>
+        <td>{{CUSTOMER_NAME}}</td>
+        <td>{{EMAIL}}</td>
+        <td>{{PHONE}}</td>
+        <td>{{BALANCE}}</td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <div class="page-footer">
+    <p>עמוד {{PageNumber}} מתוך {{TotalPages}} | תאריך הפקה: {{CurrentDate}} {{CurrentTime}}</p>
+  </div>
+</body>
+</html>
