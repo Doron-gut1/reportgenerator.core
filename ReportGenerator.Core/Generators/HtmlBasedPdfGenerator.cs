@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ReportGenerator.Core.Generators
@@ -15,7 +13,7 @@ namespace ReportGenerator.Core.Generators
     {
         private readonly HtmlTemplateManager _templateManager;
         private readonly HtmlTemplateProcessor _templateProcessor;
-        private readonly HtmlToPdfConverter _pdfConverter;
+        private readonly IHtmlToPdfConverter _pdfConverter;
 
         /// <summary>
         /// יוצר מופע חדש של יוצר PDF מבוסס HTML
@@ -26,7 +24,7 @@ namespace ReportGenerator.Core.Generators
         public HtmlBasedPdfGenerator(
             HtmlTemplateManager templateManager, 
             HtmlTemplateProcessor templateProcessor, 
-            HtmlToPdfConverter pdfConverter)
+            IHtmlToPdfConverter pdfConverter)
         {
             _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
             _templateProcessor = templateProcessor ?? throw new ArgumentNullException(nameof(templateProcessor));
@@ -77,13 +75,13 @@ namespace ReportGenerator.Core.Generators
                 if (!string.IsNullOrEmpty(headerHtml) || !string.IsNullOrEmpty(footerHtml))
                 {
                     // אם יש כותרות, נשתמש בממיר עם כותרות מותאמות
-                    return _pdfConverter.ConvertToPdfWithCustomHeaderFooter(
+                    return await _pdfConverter.ConvertToPdfWithCustomHeaderFooter(
                         processedHtml, reportTitle, headerHtml, footerHtml);
                 }
                 else
                 {
                     // אחרת נשתמש בממיר הרגיל
-                    return _pdfConverter.ConvertToPdf(processedHtml, reportTitle);
+                    return await _pdfConverter.ConvertToPdf(processedHtml, reportTitle);
                 }
             }
             catch (Exception ex)
