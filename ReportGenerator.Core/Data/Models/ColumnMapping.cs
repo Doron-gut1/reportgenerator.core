@@ -29,5 +29,10 @@
         /// כותרת ספציפית לפרוצדורה (אופציונלי)
         /// </summary>
         public string SpecificAlias { get; set; }
+        
+        /// <summary>
+        /// האם זהו שדה קבוע מטבלה (עם "_") או שדה מחושב
+        /// </summary>
+        public bool IsTableField => TableName != SpecificProcName;
     }
 }
