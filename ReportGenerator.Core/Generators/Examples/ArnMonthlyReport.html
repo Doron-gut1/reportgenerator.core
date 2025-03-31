@@ -1,186 +1,133 @@
 <!DOCTYPE html>
 <html lang="he-IL" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ReportTitle}}</title>
-  <style>
-    body { 
-      font-family: Arial, sans-serif; 
-      direction: rtl;
-      padding: 20px;
-      margin: 0;
-    }
-    .report-header { 
-      text-align: center; 
-      margin-bottom: 30px; 
-    }
-    .report-title {
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .report-subtitle {
-      font-size: 18px;
-      color: #444;
-      margin-bottom: 15px;
-    }
-    .report-params {
-      background-color: #f5f5f5;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 20px;
-    }
-    .params-row {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-    }
-    .param-item {
-      margin: 5px 0;
-    }
-    .summary-box {
-      border: 1px solid #ddd;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 5px;
-      background-color: #f9f9f9;
-    }
-    .summary-title {
-      font-weight: bold;
-      margin-bottom: 10px;
-      font-size: 16px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 5px;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-    }
-    .summary-item {
-      display: flex;
-      flex-direction: column;
-    }
-    .summary-label {
-      font-size: 13px;
-      color: #666;
-    }
-    .summary-value {
-      font-size: 16px;
-      font-weight: bold;
-    }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin-bottom: 25px;
-    }
-    th, td { 
-      border: 1px solid #ddd; 
-      padding: 10px; 
-      text-align: right;
-    }
-    th { 
-      background-color: #f2f2f2; 
-      font-weight: bold;
-    }
-    tr:nth-child(even) { 
-      background-color: #f9f9f9; 
-    }
-    tr[data-activ="0"] {
-      color: #999;
-      background-color: #f5f5f5;
-    }
-    tr[data-adv="1"] {
-      background-color: #e6f7ff;
-    }
-    .footer {
-      font-size: 12px;
-      text-align: center;
-      margin-top: 30px;
-      border-top: 1px solid #ddd;
-      padding-top: 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>{{ReportTitle}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .report-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .report-subtitle {
+            font-size: 18px;
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .report-params {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr[data-activ="0"] {
+            color: #999;
+            background-color: #f5f5f5;
+        }
+
+        tr[data-adv="1"] {
+            background-color: #e6f7ff;
+        }
+
+        .footer {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+    </style>
 </head>
 <body>
-  <div class="report-header">
-    <div class="report-title">{{ReportTitle}}</div>
-    <div class="report-subtitle">לחודש {{mnt}}/{{CurrentDate|year}}</div>
-  </div>
-  
-  <div class="report-params">
-    <div class="params-row">
-      <div class="param-item"><strong>תאריך הפקה:</strong> {{CurrentDate}}</div>
-      <div class="param-item"><strong>חודש:</strong> {{mnt}}</div>
-      <div class="param-item"><strong>קוד ישוב:</strong> {{isvkod}}</div>
+    <div class="report-header">
+        <div class="report-title">{{ReportTitle}}</div>
+        <div class="report-subtitle">לחודש {{mnt}}/{{CurrentDate}}</div>
     </div>
-  </div>
-  
-  <div class="summary-box">
-    <div class="summary-title">סיכום נתונים</div>
-    <div class="summary-grid">
-      <div class="summary-item">
-        <span class="summary-label">סה"כ השגחות</span>
-        <span class="summary-value">{{TotalArn}}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">השגחות פעילות</span>
-        <span class="summary-value">{{ActiveArn}}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">שולמו מראש</span>
-        <span class="summary-value">{{AdvArn}}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">סה"כ ברוטו חודשי</span>
-        <span class="summary-value">{{TotalBruto}}</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">סה"כ ברוטו שנתי</span>
-        <span class="summary-value">{{TotalAllBruto}}</span>
-      </div>
+
+    <div class="report-params">
+        <div>
+            <span><strong>תאריך הפקה:</strong> {{CurrentDate}}</span>
+            <span style="margin-right: 20px"><strong>חודש:</strong> {{mnt}}</span>
+            <span style="margin-right: 20px"><strong>קוד ישוב:</strong> {{isvkod}}</span>
+        </div>
     </div>
-  </div>
-  
-  <table>
-    <thead>
-      <tr>
-        <!-- שדות מטבלה (עם "_") -->
-        <th>{{HEADER:ARN_HS}}</th>
-        <th>{{HEADER:ARN_MSPKOD}}</th>
-        <th>{{HEADER:HS_ISVKOD}}</th>
-        <th>{{HEADER:ARN_PAYSUM}}</th>
-        <th>{{HEADER:ARN_SUMHK}}</th>
-        <th>{{HEADER:ARN_SUMHAN}}</th>
-        
-        <!-- שדות מחושבים (ללא "_") -->
-        <th>{{HEADER:bruto}}</th>
-        <th>{{HEADER:allbruto}}</th>
-        <th>{{HEADER:hesder}}</th>
-        <th>{{HEADER:adv}}</th>
-        <th>{{HEADER:activ}}</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- תבנית שורה שתשוכפל עבור כל שורת נתונים -->
-      <tr data-table-row="ArnData" data-activ="{{activ}}" data-adv="{{adv}}">
-        <td>{{ARN_HS}}</td>
-        <td>{{ARN_MSPKOD}}</td>
-        <td>{{HS_ISVKOD}}</td>
-        <td>{{ARN_PAYSUM}}</td>
-        <td>{{ARN_SUMHK}}</td>
-        <td>{{ARN_SUMHAN}}</td>
-        <td>{{bruto}}</td>
-        <td>{{allbruto}}</td>
-        <td>{{hesder}}</td>
-        <td>{{adv}}</td>
-        <td>{{activ}}</td>
-      </tr>
-    </tbody>
-  </table>
-  
-  <div class="footer">
-    <p>מסמך זה הופק באמצעות מערכת הדוחות החדשה | עמוד {{PageNumber}} מתוך {{TotalPages}}</p>
-  </div>
+
+    <table>
+        <thead>
+            <tr>
+                <!-- שדות מטבלה (עם "_") -->
+                <th>מספר נכס</th>
+                <th>קוד משלם פנימי</th>
+                <th>קוד ישוב</th>
+                <th>סכום תשלום</th>
+                <th>סכום ה.ק</th>
+                <th>סכום הנחה</th>
+
+                <!-- שדות מחושבים (ללא "_") -->
+                <th>ברוטו</th>
+                <th>ברוטו שנתי</th>
+                <th>הסדר</th>
+                <th>שולם מראש</th>
+                <th>פעיל</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- תבנית שורה שתשוכפל עבור כל שורת נתונים -->
+            <!-- שימו לב לשינוי שם הטבלה ל-GetArnReport -->
+            <tr data-table-row="GetArnReport" data-activ="{{activ}}" data-adv="{{adv}}">
+                <td>{{ARN_HS}}</td>
+                <td>{{ARN_MSPKOD}}</td>
+                <td>{{HS_ISVKOD}}</td>
+                <td>{{ARN_PAYSUM}}</td>
+                <td>{{ARN_SUMHK}}</td>
+                <td>{{ARN_SUMHAN}}</td>
+                <td>{{bruto}}</td>
+                <td>{{allbruto}}</td>
+                <td>{{hesder}}</td>
+                <td>{{adv}}</td>
+                <td>{{activ}}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>מסמך זה הופק באמצעות מערכת הדוחות החדשה</p>
+    </div>
 </body>
 </html>
