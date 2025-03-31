@@ -149,7 +149,7 @@ namespace ReportGenerator.Core.Generators
                 string rowTemplate = match.Groups[3].Value;
 
                 // לוג לדיבאג
-                Console.WriteLine($"נמצאה תבנית לטבלה: {tableName}, אורך התבנית: {rowTemplate.Length}");
+               // Console.WriteLine($"נמצאה תבנית לטבלה: {tableName}, אורך התבנית: {rowTemplate.Length}");
 
                 // בדיקת מפתח עם התחשבות בקידומת dbo.
                 var keyToUse = FindMatchingTableKey(dataTables, tableName);
@@ -165,14 +165,9 @@ namespace ReportGenerator.Core.Generators
 
                 var dataTable = dataTables[keyToUse];
                 // לוג לדיבאג
-                Console.WriteLine($"נמצאה טבלת נתונים: {keyToUse}, מספר שורות: {dataTable.Rows.Count}, מספר עמודות: {dataTable.Columns.Count}");
+                //Console.WriteLine($"נמצאה טבלת נתונים: {keyToUse}, מספר שורות: {dataTable.Rows.Count}, מספר עמודות: {dataTable.Columns.Count}");
 
-                // הדפסת שמות העמודות לדיבאג
-                Console.WriteLine("שמות עמודות:");
-                foreach (DataColumn col in dataTable.Columns)
-                {
-                    Console.WriteLine($"  - {col.ColumnName}");
-                }
+
 
                 StringBuilder rowsBuilder = new StringBuilder();
 
@@ -189,7 +184,7 @@ namespace ReportGenerator.Core.Generators
                         if (currentRow.Contains(placeholder))
                         {
                             currentRow = currentRow.Replace(placeholder, value);
-                            Console.WriteLine($"החלפת פלייסהולדר: {placeholder} בערך: {value}");
+                            //Console.WriteLine($"החלפת פלייסהולדר: {placeholder} בערך: {value}");
                         }
                     }
 
