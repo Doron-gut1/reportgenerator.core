@@ -148,9 +148,6 @@ namespace ReportGenerator.Core.Generators
                 // שינוי: התוכן עכשיו בקבוצה 3 במקום 2
                 string rowTemplate = match.Groups[3].Value;
 
-                // לוג לדיבאג
-               // Console.WriteLine($"נמצאה תבנית לטבלה: {tableName}, אורך התבנית: {rowTemplate.Length}");
-
                 // בדיקת מפתח עם התחשבות בקידומת dbo.
                 var keyToUse = FindMatchingTableKey(dataTables, tableName);
 
@@ -164,10 +161,6 @@ namespace ReportGenerator.Core.Generators
                 }
 
                 var dataTable = dataTables[keyToUse];
-                // לוג לדיבאג
-                //Console.WriteLine($"נמצאה טבלת נתונים: {keyToUse}, מספר שורות: {dataTable.Rows.Count}, מספר עמודות: {dataTable.Columns.Count}");
-
-
 
                 StringBuilder rowsBuilder = new StringBuilder();
 
@@ -184,11 +177,10 @@ namespace ReportGenerator.Core.Generators
                         if (currentRow.Contains(placeholder))
                         {
                             currentRow = currentRow.Replace(placeholder, value);
-                            //Console.WriteLine($"החלפת פלייסהולדר: {placeholder} בערך: {value}");
                         }
                     }
 
-                    rowsBuilder.Append(currentRow);
+                    rowsBuilder.AppendLine($"<tr>{currentRow}</tr>");
                 }
 
                 // לוג לדיבאג - אורך התוצאה

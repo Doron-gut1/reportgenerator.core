@@ -3,16 +3,24 @@
   "WorkspaceRootPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{FAC28C79-CB6B-41DE-BB10-F38102416367}|ReportTester\\ReportTester.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reporttester\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FAC28C79-CB6B-41DE-BB10-F38102416367}|ReportTester\\ReportTester.csproj|solutionrelative:reporttester\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\htmltemplateprocessor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\generators\\htmltemplateprocessor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\data\\dataaccess.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\data\\dataaccess.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\examples\\arnmonthlyreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\generators\\examples\\arnmonthlyreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{FAC28C79-CB6B-41DE-BB10-F38102416367}|ReportTester\\ReportTester.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reporttester\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{FAC28C79-CB6B-41DE-BB10-F38102416367}|ReportTester\\ReportTester.csproj|solutionrelative:reporttester\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\examples\\arnsummarycomplexreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\generators\\examples\\arnsummarycomplexreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\data\\dataaccess.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\data\\dataaccess.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\puppeteerhtmltopdfconverter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -21,14 +29,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\htmlbasedpdfgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\generators\\htmlbasedpdfgenerator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\examples\\arnsummarycomplexreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\generators\\examples\\arnsummarycomplexreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\examples\\arnmonthlyreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\generators\\examples\\arnmonthlyreport.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
@@ -52,7 +52,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -60,15 +60,80 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "HtmlTemplateProcessor.cs",
               "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlTemplateProcessor.cs",
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\HtmlTemplateProcessor.cs",
               "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlTemplateProcessor.cs",
               "RelativeToolTip": "ReportGenerator.Core\\Generators\\HtmlTemplateProcessor.cs",
-              "ViewState": "AgIAAJUAAAAAAAAAAAAwwKcAAAAjAAAAAAAAAA==",
+              "ViewState": "AgIAAKEAAAAAAAAAAAAwwLkAAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-31T10:15:37.262Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ArnMonthlyReport.html",
+              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
+              "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
+              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
+              "RelativeToolTip": "ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
+              "ViewState": "AgIAAFYAAAAAAAAAAAAIwGgAAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2025-03-31T10:18:42.043Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "HtmlBasedPdfGenerator.cs",
+              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
+              "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
+              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
+              "RelativeToolTip": "ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAYwEMAAABsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-31T06:58:52.879Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportTester\\Program.cs",
+              "RelativeDocumentMoniker": "ReportTester\\Program.cs",
+              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportTester\\Program.cs",
+              "RelativeToolTip": "ReportTester\\Program.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAkwBgAAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-31T06:51:18.867Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "DataAccess.cs",
+              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Data\\DataAccess.cs",
+              "RelativeDocumentMoniker": "ReportGenerator.Core\\Data\\DataAccess.cs",
+              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Data\\DataAccess.cs",
+              "RelativeToolTip": "ReportGenerator.Core\\Data\\DataAccess.cs",
+              "ViewState": "AgIAADMBAAAAAAAAAAAcwMQBAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-03-31T08:15:01.607Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "ArnSummaryComplexReport.html",
+              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
+              "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
+              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
+              "RelativeToolTip": "ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
+              "ViewState": "AgIAAN0AAAAAAAAAAAAUwBEBAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2025-03-31T10:38:23.589Z",
               "EditorCaption": ""
             },
             {
@@ -86,72 +151,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "ArnMonthlyReport.html",
-              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
-              "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
-              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
-              "RelativeToolTip": "ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
-              "ViewState": "AgIAAMIAAAAAAAAAAAAIwNEAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-03-31T10:18:42.043Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "HtmlBasedPdfGenerator.cs",
-              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
-              "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
-              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
-              "RelativeToolTip": "ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAAAYwEMAAABsAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-31T06:58:52.879Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportTester\\Program.cs",
-              "RelativeDocumentMoniker": "ReportTester\\Program.cs",
-              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportTester\\Program.cs",
-              "RelativeToolTip": "ReportTester\\Program.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAAAswEYAAAAdAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-31T06:51:18.867Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "DataAccess.cs",
-              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Data\\DataAccess.cs",
-              "RelativeDocumentMoniker": "ReportGenerator.Core\\Data\\DataAccess.cs",
-              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Data\\DataAccess.cs",
-              "RelativeToolTip": "ReportGenerator.Core\\Data\\DataAccess.cs",
-              "ViewState": "AgIAADMBAAAAAAAAAAAcwMQBAAASAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-03-31T08:15:01.607Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "ArnSummaryComplexReport.html",
-              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
-              "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
-              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
-              "RelativeToolTip": "ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
-              "ViewState": "AgIAAN0AAAAAAAAAAAAUwBEBAAAHAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-03-31T10:38:23.589Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
               "Title": "PuppeteerHtmlToPdfConverter.cs",
               "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\PuppeteerHtmlToPdfConverter.cs",
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\PuppeteerHtmlToPdfConverter.cs",
