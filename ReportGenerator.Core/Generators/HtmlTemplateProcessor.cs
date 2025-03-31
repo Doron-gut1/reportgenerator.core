@@ -74,6 +74,40 @@ namespace ReportGenerator.Core.Generators
         }
         
         /// <summary>
+        /// מקבל את השם העברי של עמודה לפי שם העמודה באנגלית
+        /// מפעיל לוגיקת זיהוי ופיצול של שמות שדות
+        /// </summary>
+        /// <param name="columnName">שם העמודה באנגלית</param>
+        /// <param name="procName">שם הפרוצדורה (אופציונלי)</param>
+        /// <returns>הכותרת בעברית של העמודה</returns>
+        private string GetHebrewName(string columnName, string procName)
+        {
+            // בדיקה אם יש "_" בשם השדה
+            int underscoreIndex = columnName.IndexOf('_');
+            
+            if (underscoreIndex > 0)
+            {
+                // שדה מטבלה - פיצול לפי "_"
+                string tableName = columnName.Substring(0, underscoreIndex);
+                string fieldName = columnName.Substring(underscoreIndex + 1);
+                
+                // חיפוש בטבלת המיפויים
+                string mappingKey = $"{tableName}_{fieldName}";
+                if (_columnMappings.TryGetValue(mappingKey, out string mappedName))
+                    return mappedName;
+            }
+            else
+            {
+                // שדה מחושב - חיפוש לפי שם השדה ישירות
+                if (_columnMappings.TryGetValue(columnName, out string mappedName))
+                    return mappedName;
+            }
+            
+            // אם לא מצאנו מיפוי, נחזיר את השם המקורי
+            return columnName;
+        }
+        
+        /// <summary>
         /// מחליף פלייסהולדרים של כותרות (HEADER:) בערכים עבריים מהמיפוי
         /// </summary>
         private string ProcessHeaders(string template)
@@ -83,9 +117,7 @@ namespace ReportGenerator.Core.Generators
             foreach (Match match in headerMatches)
             {
                 string columnName = match.Groups[1].Value;
-                string hebrewHeader = _columnMappings.ContainsKey(columnName) 
-                    ? _columnMappings[columnName] 
-                    : columnName; // אם אין מיפוי, להשתמש בשם המקורי
+                string hebrewHeader = GetHebrewName(columnName, null);
                 
                 template = template.Replace(match.Value, hebrewHeader);
             }
