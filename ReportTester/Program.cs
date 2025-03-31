@@ -17,21 +17,22 @@ class Program
             string connectionString = "Server=epr-803-sql\\qa2016;Database=BrnGviaDev;Trusted_Connection=True;TrustServerCertificate=True;";
 
             string templatePath = @"..\..\..\..\ReportGenerator.Core\Generators\Examples";
+            string reportName = "ArnSummaryComplexReport";
             OutputFormat outFormat = OutputFormat.PDF;
             var reportManager = new ReportManager(connectionString, templatePath);
             var parameters = new object[] {
                   "mnt", 275, DbType.Int32,       // חודש מרץ
-                "isvkod",null , DbType.Int32     // קוד ישוב ספציפי
+                "isvkod",0 , DbType.Int32     // קוד ישוב ספציפי
              };
 
             // הרצת הדוח
-            var result = reportManager.GenerateReport("ArnMonthlyReport", outFormat, parameters).Result;
+            var result = await reportManager.GenerateReport(reportName, outFormat, parameters);
 
             // שמירת התוצאה לקובץ
             if (outFormat == OutputFormat.PDF)
-                File.WriteAllBytes("ArnMonthlyReport.xlsx", result);
+                File.WriteAllBytes($"{reportName}.pdf", result);
             else
-                File.WriteAllBytes("ArnMonthlyReport.pdf", result);
+                File.WriteAllBytes($"{reportName}.xlsx", result);
 
             Console.WriteLine("Report generated successfully!");
         
