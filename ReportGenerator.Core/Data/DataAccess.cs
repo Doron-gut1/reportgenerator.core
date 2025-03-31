@@ -94,35 +94,28 @@ namespace ReportGenerator.Core.Data
                                     .Select(p => p.Replace("dbo.", ""))
                                     .ToArray();
             
-            // 1. קבלת מיפויים לשדות מטבלאות
-            var tableResults = await connection.QueryAsync<ColumnMapping>(
+            // קבלת כל המיפויים הרלוונטיים בשאילתה אחת
+            var results = await connection.QueryAsync<ColumnMapping>(
                 @"SELECT TableName, ColumnName, HebrewAlias 
                   FROM ReportsGeneratorColumns 
-                  WHERE TableName IN (SELECT name FROM sys.tables)");
-
-            // 2. קבלת מיפויים ספציפיים לפרוצדורות
-            var procResults = await connection.QueryAsync<ColumnMapping>(
-                @"SELECT TableName, ColumnName, HebrewAlias 
-                  FROM ReportsGeneratorColumns 
-                  WHERE TableName IN @ProcNames",
+                  WHERE TableName IN @ProcNames OR TableName IN (SELECT name FROM sys.tables)",
                 new { ProcNames = procsList });
             
-            // הוספת מיפויים לשדות מטבלאות - בפורמט TableName_ColumnName
-            foreach (var mapping in tableResults)
+            foreach (var mapping in results)
             {
-                string key = $"{mapping.TableName}_{mapping.ColumnName}";
-                mappings[key] = mapping.HebrewAlias;
-            }
-            
-            // הוספת מיפויים ספציפיים לפרוצדורות - עבור שדות מחושבים
-            foreach (var mapping in procResults)
-            {
-                // שמירת מיפוי ישיר לשם השדה (לשדות מחושבים)
-                mappings[mapping.ColumnName] = mapping.HebrewAlias;
+                // שמירת המיפוי בהתאם לסוג השדה:
+                // 1. לשדות מטבלה (TableName_ColumnName)
+                if (mapping.TableName != procNames)
+                {
+                    string compositeKey = $"{mapping.TableName}_{mapping.ColumnName}";
+                    mappings[compositeKey] = mapping.HebrewAlias;
+                }
                 
-                // גם בפורמט ProcName_ColumnName (אופציונלי)
-                string compositeKey = $"{mapping.TableName}_{mapping.ColumnName}";
-                mappings[compositeKey] = mapping.HebrewAlias;
+                // 2. לשדות מחושבים (שם השדה בלבד)
+                if (procsList.Contains(mapping.TableName))
+                {
+                    mappings[mapping.ColumnName] = mapping.HebrewAlias;
+                }
             }
             
             return mappings;
