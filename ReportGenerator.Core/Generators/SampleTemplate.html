@@ -4,108 +4,97 @@
   <meta charset="UTF-8">
   <title>{{ReportTitle}}</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      direction: rtl;
-      margin: 20px;
+    body { 
+      font-family: Arial, sans-serif; 
+      direction: rtl; 
+      padding: 20px;
+      margin: 0;
     }
-    
-    .report-header {
-      text-align: center;
-      margin-bottom: 20px;
+    .report-header { 
+      text-align: center; 
+      margin-bottom: 30px; 
     }
-    
     .report-title {
       font-size: 24px;
       font-weight: bold;
       margin-bottom: 10px;
     }
-    
     .report-subtitle {
       font-size: 16px;
-      margin-bottom: 10px;
+      color: #666;
     }
-    
-    .report-params {
-      background-color: #f8f8f8;
+    .params-section {
+      background-color: #f5f5f5;
       padding: 10px;
-      border: 1px solid #ddd;
+      border-radius: 5px;
       margin-bottom: 20px;
     }
-    
-    .report-params p {
-      margin: 5px 0;
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-bottom: 25px;
     }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 10px; 
       text-align: right;
     }
-    
-    th {
-      background-color: #f2f2f2;
+    th { 
+      background-color: #f2f2f2; 
       font-weight: bold;
     }
-    
-    tr:nth-child(even) {
-      background-color: #f8f8f8;
+    tr:nth-child(even) { 
+      background-color: #f9f9f9; 
     }
-    
-    .negative {
-      color: red;
-    }
-    
-    .page-footer {
-      text-align: center;
+    .footer {
       font-size: 12px;
+      text-align: center;
+      margin-top: 30px;
       border-top: 1px solid #ddd;
-      padding-top: 5px;
+      padding-top: 10px;
     }
   </style>
 </head>
 <body>
   <div class="report-header">
     <div class="report-title">{{ReportTitle}}</div>
-    <div class="report-subtitle">דוח לדוגמה</div>
+    <div class="report-subtitle">דוח דוגמה המדגים את פורמט שמות השדות החדש</div>
   </div>
   
-  <div class="report-params">
-    <p><strong>מתאריך:</strong> {{DateFrom}}</p>
-    <p><strong>עד תאריך:</strong> {{DateTo}}</p>
+  <div class="params-section">
+    <p><strong>תאריך הפקה:</strong> {{CurrentDate}} {{CurrentTime}}</p>
+    <p><strong>מתאריך:</strong> {{FromDate}} <strong>עד תאריך:</strong> {{ToDate}}</p>
   </div>
   
-  <!-- דוגמה לטבלה עם מיפוי כותרות אוטומטי -->
   <table>
     <thead>
       <tr>
-        <th>{{HEADER:CUSTOMER_ID}}</th>
-        <th>{{HEADER:CUSTOMER_NAME}}</th>
-        <th>{{HEADER:EMAIL}}</th>
-        <th>{{HEADER:PHONE}}</th>
-        <th>{{HEADER:BALANCE}}</th>
+        <!-- דוגמה לשימוש בשמות שדות מטבלה (עם "_") -->
+        <th>{{HEADER:ARN_HS}}</th>
+        <th>{{HEADER:ARN_MSPKOD}}</th>
+        <th>{{HEADER:HS_ISVKOD}}</th>
+        
+        <!-- דוגמה לשימוש בשמות שדות מחושבים (ללא "_") -->
+        <th>{{HEADER:bruto}}</th>
+        <th>{{HEADER:allbruto}}</th>
+        <th>{{HEADER:status}}</th>
       </tr>
     </thead>
     <tbody>
-      <!-- הגדרת שורה דינמית שתשוכפל עבור כל לקוח -->
-      <tr data-table-row="Customers">
-        <td>{{CUSTOMER_ID}}</td>
-        <td>{{CUSTOMER_NAME}}</td>
-        <td>{{EMAIL}}</td>
-        <td>{{PHONE}}</td>
-        <td>{{BALANCE}}</td>
+      <!-- תבנית שורה שתשוכפל עבור כל שורת נתונים -->
+      <tr data-table-row="ArnData">
+        <td>{{ARN_HS}}</td>
+        <td>{{ARN_MSPKOD}}</td>
+        <td>{{HS_ISVKOD}}</td>
+        <td>{{bruto}}</td>
+        <td>{{allbruto}}</td>
+        <td>{{status}}</td>
       </tr>
     </tbody>
   </table>
   
-  <div class="page-footer">
-    <p>עמוד {{PageNumber}} מתוך {{TotalPages}} | תאריך הפקה: {{CurrentDate}} {{CurrentTime}}</p>
+  <div class="footer">
+    מסמך זה הופק באמצעות מערכת הדוחות החדשה | עמוד {{PageNumber}} מתוך {{TotalPages}}
   </div>
 </body>
 </html>
