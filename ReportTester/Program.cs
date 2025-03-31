@@ -16,18 +16,21 @@ class Program
             // הגדרת Connection String
             string connectionString = "Server=epr-803-sql\\qa2016;Database=BrnGviaDev;Trusted_Connection=True;TrustServerCertificate=True;";
 
-            var reportManager = new ReportManager(connectionString, @"X:\team_gvia\Hila\EmailData\MyPdfֹ_YOSEF4.pdf");
+            string templatePath = @"..\..\..\..\ReportGenerator.Core\Generators\Examples";
 
-            // הגדרת פרמטרים לדוגמה
-            var parameters = new object[]
-            { "mnt", 277, DbType.Int32
-             //,"name", "sds", DbType.String 
-            // "DepartmentId", 1, SqlDbType.Int
-            };
+            var reportManager = new ReportManager(connectionString, templatePath);
+            var parameters = new object[] {
+                  "mnt", 3, DbType.Int32,       // חודש מרץ
+                "isvkod", 1, DbType.Int32     // קוד ישוב ספציפי
+             };
 
-            await TestReport(reportManager, "arnrepcrntmkomit", parameters);
+            // הרצת הדוח
+            var result = reportManager.GenerateReport("ArnMonthlyReport", OutputFormat.PDF, parameters).Result;
 
-            Console.WriteLine("\nPress any key to exit...");
+            // שמירת התוצאה לקובץ
+            File.WriteAllBytes("ArnMonthlyReport.pdf", result);
+            Console.WriteLine("Report generated successfully!");
+        
             Console.ReadKey();
         }
         catch (Exception ex)

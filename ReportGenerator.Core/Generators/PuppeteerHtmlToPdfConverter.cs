@@ -39,7 +39,7 @@ namespace ReportGenerator.Core.Generators
                 Format = PaperFormat.A4,
                 PrintBackground = true,
                 DisplayHeaderFooter = false,
-                Margin = new MarginOptions
+                MarginOptions = new MarginOptions
                 {
                     Top = "1cm",
                     Bottom = "1cm",
@@ -66,7 +66,7 @@ namespace ReportGenerator.Core.Generators
                 HeaderTemplate = headerHtml ?? "<div/>",
                 FooterTemplate = footerHtml ?? "<div style=\"text-align: right;width: 297mm;font-size: 15px;\"><span style=\"margin-right: 1cm\">עמוד <span class=\"pageNumber\"></span> מתוך <span class=\"totalPages\"></span></span></div>",
                 DisplayHeaderFooter = true,
-                Margin = new MarginOptions
+                MarginOptions = new MarginOptions
                 {
                     Top = "2cm",
                     Bottom = "2cm",
@@ -121,15 +121,16 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
-                if (_downloadChrome)
-                {
-                    await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
-                }
+                //if (_downloadChrome)
+                //{
+                //    await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+                //}
 
                 await using (var browser = await Puppeteer.LaunchAsync(new LaunchOptions
                 {
                     Headless = true,
-                    ExecutablePath = !string.IsNullOrEmpty(_chromePath) ? _chromePath : null
+                    ExecutablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+                    //ExecutablePath = !string.IsNullOrEmpty(_chromePath) ? _chromePath : null
                 }))
                 {
                     await using (var page = await browser.NewPageAsync())

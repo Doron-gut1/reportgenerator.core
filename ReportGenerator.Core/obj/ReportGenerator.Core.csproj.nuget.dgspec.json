@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj": {}
+    "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj": {}
   },
   "projects": {
-    "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj": {
+    "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj",
+        "projectUniqueName": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj",
         "projectName": "ReportGenerator.Core",
-        "projectPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj",
+        "projectPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core.csproj",
         "packagesPath": "C:\\Users\\dorong\\.nuget\\packages\\",
-        "outputPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\ReportGenerator.Core\\obj\\",
+        "outputPath": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -50,10 +50,6 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
-            "BouncyCastle.Cryptography": {
-              "target": "Package",
-              "version": "[2.5.0, )"
-            },
             "Dapper": {
               "target": "Package",
               "version": "[2.1.35, )"
@@ -62,21 +58,17 @@
               "target": "Package",
               "version": "[7.5.3, )"
             },
+            "HtmlAgilityPack": {
+              "target": "Package",
+              "version": "[1.11.59, )"
+            },
             "Microsoft.Data.SqlClient": {
               "target": "Package",
               "version": "[6.0.1, )"
             },
-            "itext7": {
+            "PuppeteerSharp": {
               "target": "Package",
-              "version": "[7.2.5, )"
-            },
-            "itext7.bouncy-castle-adapter": {
-              "target": "Package",
-              "version": "[9.0.0, )"
-            },
-            "itext7.commons": {
-              "target": "Package",
-              "version": "[7.2.5, )"
+              "version": "[12.0.0, )"
             }
           },
           "imports": [
