@@ -108,7 +108,6 @@ C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Dapper.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\EPPlus.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\EPPlus.Interfaces.dll
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\EPPlus.System.Drawing.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\HtmlAgilityPack.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.Bcl.Cryptography.dll
@@ -137,13 +136,10 @@ C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.IO.RecyclableMemoryStream.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.SqlServer.Server.dll
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.Win32.SystemEvents.dll
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Newtonsoft.Json.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\PuppeteerSharp.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.ClientModel.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Configuration.ConfigurationManager.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Diagnostics.EventLog.dll
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Drawing.Common.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Memory.Data.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
@@ -166,7 +162,6 @@ C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win-arm64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win\lib\net8.0\Microsoft.Win32.SystemEvents.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.Messages.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
@@ -184,3 +179,6 @@ C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\Debug\net8.0\
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\Debug\net8.0\ReportTester.pdb
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\Debug\net8.0\ReportTester.genruntimeconfig.cache
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\Debug\net8.0\ref\ReportTester.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Handlebars.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Security.Cryptography.Xml.dll

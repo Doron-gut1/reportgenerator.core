@@ -126,13 +126,24 @@
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
+
+        .summary-row {
+            font-weight: bold;
+            background-color: #f2f2f2;
+            border-top: 2px solid #999;
+        }
+
+        .summary-row td {
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
     </style>
 </head>
 <body>
     <!-- כותרת הדוח -->
     <div class="report-header">
         <div class="report-title">סיכום נתוני ארנונה</div>
-        <div>לחודש {{mnt}}</div>
+        <div>לחודש {{mntname}}</div>
     </div>
 
     <!-- פרמטרים -->
@@ -140,7 +151,7 @@
         <table class="params-table">
             <tr>
                 <td><strong>תאריך הפקה:</strong> {{CurrentDate}}</td>
-                <td><strong>חודש:</strong> {{mnt}}</td>
+                <td><strong>חודש:</strong> {{mntname}}</td>
                 <td><strong>קוד ישוב:</strong> {{isvkod}}</td>
             </tr>
         </table>
@@ -168,7 +179,7 @@
                         <td>₪ {{bruto}}</td>
                     </tr>
                     <tr>
-                        <td>סכום הנחות מימון:</td>
+                        <td>סכום הנחות ה.ק:</td>
                         <td>₪ {{sumhk}}</td>
                     </tr>
                     <tr>
@@ -237,11 +248,19 @@
         </thead>
         <tbody>
             <tr data-table-row="GetArnPaymentMethodSummary">
+                {{#if IsSummary == 1}}
+                <td><strong>סה"כ</strong></td>
+                <td class="amount"><strong>₪ {{paysum}}</strong></td>
+                <td class="amount"><strong>₪ {{sumhk}}</strong></td>
+                <td><strong>{{cnths}}</strong></td>
+                <td><strong>{{cntmsp}}</strong></td>
+                {{else}}
                 <td>{{hesder}}</td>
                 <td class="amount">₪ {{paysum}}</td>
                 <td class="amount">₪ {{sumhk}}</td>
                 <td>{{cnths}}</td>
                 <td>{{cntmsp}}</td>
+                {{/if}}
             </tr>
         </tbody>
     </table>

@@ -68,7 +68,7 @@ namespace ReportGenerator.Core.Management
 
                 // עדכון מעבד התבניות עם המיפויים
                 _templateProcessor = new HtmlTemplateProcessor(columnMappings);
-                
+
                 // עדכון מחלקת האקסל עם המיפויים
                 _excelGenerator = new ExcelGenerator(columnMappings);
 
@@ -83,7 +83,7 @@ namespace ReportGenerator.Core.Management
                     {
                         throw new Exception($"No HTML template found for report {reportName}. Please create an HTML template file named '{reportName}.html'");
                     }
-                    
+
                     // שימוש בגישה החדשה מבוססת HTML
                     return await _htmlPdfGenerator.GenerateFromTemplate(
                         reportName, reportConfig.Title, dataTables, parsedParams);

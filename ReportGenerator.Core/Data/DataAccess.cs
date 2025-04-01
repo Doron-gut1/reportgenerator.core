@@ -29,20 +29,29 @@ namespace ReportGenerator.Core.Data
             return result ?? throw new Exception($"Report Name {reportName} not found");
         }
 
+
+        public async Task<string> GetMonthName(int mnt)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QuerySingleOrDefaultAsync<string>(
+                "SELECT dbo.mntname(@Mnt)",
+                new { Mnt = mnt });
+        }
+
         /// <summary>
         /// מקבל את כותרת הדוח
         /// </summary>
         /// <param name="reportName">שם הדוח</param>
         /// <returns>כותרת הדוח</returns>
-        public async Task<string> GetReportTitle(string reportName)
-        {
-            using var connection = new SqlConnection(_connectionString);
-            var result = await connection.QuerySingleOrDefaultAsync<string>(
-                "SELECT Title FROM ReportsGenerator WHERE ReportName = @ReportName",
-                new { ReportName = reportName });
+        //public async Task<string> GetReportTitle(string reportName)
+        //{
+        //    using var connection = new SqlConnection(_connectionString);
+        //    var result = await connection.QuerySingleOrDefaultAsync<string>(
+        //        "SELECT Title FROM ReportsGenerator WHERE ReportName = @ReportName",
+        //        new { ReportName = reportName });
 
-            return result ?? throw new Exception($"Report Name {reportName} not found");
-        }
+        //    return result ?? throw new Exception($"Report Name {reportName} not found");
+        //}
 
         /// <summary>
         /// מקבל את כל המידע על דוח מטבלת ההגדרות
@@ -326,57 +335,57 @@ namespace ReportGenerator.Core.Data
         /// <summary>
         /// מיזוג טבלאות נתונים
         /// </summary>
-        private void MergeDataTables(DataTable mainTable, DataTable newData)
-        {
-            // אם הטבלה הראשית ריקה, נוסיף את כל העמודות
-            if (mainTable.Columns.Count == 0)
-            {
-                foreach (DataColumn col in newData.Columns)
-                {
-                    mainTable.Columns.Add(col.ColumnName, col.DataType);
-                }
-            }
-            // אם יש עמודות חדשות, נוסיף אותן
-            else
-            {
-                foreach (DataColumn col in newData.Columns)
-                {
-                    string columnName = col.ColumnName;
-                    if (!mainTable.Columns.Contains(columnName))
-                    {
-                        mainTable.Columns.Add(columnName, col.DataType);
-                    }
-                }
-            }
+        //private void MergeDataTables(DataTable mainTable, DataTable newData)
+        //{
+        //    // אם הטבלה הראשית ריקה, נוסיף את כל העמודות
+        //    if (mainTable.Columns.Count == 0)
+        //    {
+        //        foreach (DataColumn col in newData.Columns)
+        //        {
+        //            mainTable.Columns.Add(col.ColumnName, col.DataType);
+        //        }
+        //    }
+        //    // אם יש עמודות חדשות, נוסיף אותן
+        //    else
+        //    {
+        //        foreach (DataColumn col in newData.Columns)
+        //        {
+        //            string columnName = col.ColumnName;
+        //            if (!mainTable.Columns.Contains(columnName))
+        //            {
+        //                mainTable.Columns.Add(columnName, col.DataType);
+        //            }
+        //        }
+        //    }
 
-            // העתקת כל השורות מהטבלה החדשה
-            foreach (DataRow newRow in newData.Rows)
-            {
-                var row = mainTable.NewRow();
-                foreach (DataColumn col in newData.Columns)
-                {
-                    string columnName = col.ColumnName;
-                    row[columnName] = newRow[columnName];
-                }
-                mainTable.Rows.Add(row);
-            }
-        }
+        //    // העתקת כל השורות מהטבלה החדשה
+        //    foreach (DataRow newRow in newData.Rows)
+        //    {
+        //        var row = mainTable.NewRow();
+        //        foreach (DataColumn col in newData.Columns)
+        //        {
+        //            string columnName = col.ColumnName;
+        //            row[columnName] = newRow[columnName];
+        //        }
+        //        mainTable.Rows.Add(row);
+        //    }
+        //}
 
-        /// <summary>
-        /// מציאת שם עמודה חלופי במקרה של התנגשות
-        /// </summary>
-        private string FindMatchingColumnName(DataTable table, string baseColumnName)
-        {
-            int suffix = 1;
-            string columnName = baseColumnName;
+        ///// <summary>
+        ///// מציאת שם עמודה חלופי במקרה של התנגשות
+        ///// </summary>
+        //private string FindMatchingColumnName(DataTable table, string baseColumnName)
+        //{
+        //    int suffix = 1;
+        //    string columnName = baseColumnName;
 
-            while (table.Columns.Contains(columnName))
-            {
-                columnName = $"{baseColumnName}_{++suffix}";
-            }
+        //    while (table.Columns.Contains(columnName))
+        //    {
+        //        columnName = $"{baseColumnName}_{++suffix}";
+        //    }
 
-            return columnName;
-        }
+        //    return columnName;
+        //}
 
         /// <summary>
         /// המרת תוצאות Dapper לטבלת נתונים
