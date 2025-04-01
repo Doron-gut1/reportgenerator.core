@@ -11,6 +11,7 @@ namespace ReportGenerator.Core.Generators
     public class ExcelGenerator
     {
         private readonly Dictionary<string, string> _columnMappings;
+        private readonly List<string> _hiddenColumns = new List<string> { "IsSummary" };
 
         /// <summary>
         /// יוצר מופע חדש של יוצר קבצי אקסל
@@ -33,7 +34,7 @@ namespace ReportGenerator.Core.Generators
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Report");
-                
+
                 // הגדרת כיווניות לעברית
                 worksheet.View.RightToLeft = true;
 
@@ -42,7 +43,7 @@ namespace ReportGenerator.Core.Generators
                 {
                     string columnName = data.Columns[i].ColumnName;
                     string hebrewName = GetHebrewColumnName(columnName);
-                    
+
                     worksheet.Cells[1, i + 1].Value = hebrewName;
                     worksheet.Cells[1, i + 1].Style.Font.Bold = true;
                     worksheet.Cells[1, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -56,9 +57,9 @@ namespace ReportGenerator.Core.Generators
                     {
                         var cell = worksheet.Cells[row + 2, col + 1];
                         var value = data.Rows[row][col];
-                        
+
                         cell.Value = value;
-                        
+
                         // התאמת פורמט לסוג הנתונים
                         if (value is decimal || value is double || value is float)
                         {
@@ -78,7 +79,7 @@ namespace ReportGenerator.Core.Generators
                 return package.GetAsByteArray();
             }
         }
-        
+
         /// <summary>
         /// יוצר קובץ אקסל ממספר טבלאות נתונים
         /// </summary>
@@ -89,60 +90,130 @@ namespace ReportGenerator.Core.Generators
         {
             if (dataTables == null || dataTables.Count == 0)
                 throw new ArgumentException("No data provided for Excel generation");
-            
+
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            
+
             using (var package = new ExcelPackage())
             {
                 foreach (var tableEntry in dataTables)
                 {
                     string tableName = tableEntry.Key;
                     DataTable data = tableEntry.Value;
-                    
+
+                    if (data.Rows.Count == 0)
+                        continue;
+
                     // יצירת גיליון חדש
                     var worksheet = package.Workbook.Worksheets.Add(tableName);
-                    
+
                     // הגדרת כיווניות RTL
                     worksheet.View.RightToLeft = true;
-                    
+
                     // הוספת כותרת הדוח
                     worksheet.Cells[1, 1].Value = reportTitle;
                     worksheet.Cells[1, 1, 1, data.Columns.Count].Merge = true;
                     worksheet.Cells[1, 1].Style.Font.Bold = true;
                     worksheet.Cells[1, 1].Style.Font.Size = 14;
                     worksheet.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    
+
                     // הוספת תאריך הפקה
                     worksheet.Cells[2, 1].Value = $"תאריך הפקה: {DateTime.Now:dd/MM/yyyy}";
                     worksheet.Cells[2, 1, 2, data.Columns.Count].Merge = true;
                     worksheet.Cells[2, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    
-                    // הוספת כותרות בעברית
+
+                    // יצירת רשימת עמודות שיוצגו (ללא העמודות המוסתרות)
+                    var visibleColumns = new List<DataColumn>();
+                    var columnIndexMap = new Dictionary<int, int>(); // ממפה מאינדקס מקורי לאינדקס בפלט
+
                     for (int col = 0; col < data.Columns.Count; col++)
                     {
-                        string columnName = data.Columns[col].ColumnName;
+                        if (!_hiddenColumns.Contains(data.Columns[col].ColumnName))
+                        {
+                            visibleColumns.Add(data.Columns[col]);
+                            columnIndexMap[col] = visibleColumns.Count - 1;
+                        }
+                    }
+
+                    // הוספת כותרות בעברית (רק לעמודות גלויות)
+                    for (int col = 0; col < visibleColumns.Count; col++)
+                    {
+                        string columnName = visibleColumns[col].ColumnName;
                         string hebrewHeader = GetHebrewColumnName(columnName);
-                        
+
                         worksheet.Cells[4, col + 1].Value = hebrewHeader;
                         worksheet.Cells[4, col + 1].Style.Font.Bold = true;
                         worksheet.Cells[4, col + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
                         worksheet.Cells[4, col + 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
                         worksheet.Cells[4, col + 1].Style.Border.BorderAround(ExcelBorderStyle.Thin);
                     }
-                    
+
                     // הוספת נתונים
                     for (int row = 0; row < data.Rows.Count; row++)
                     {
-                        for (int col = 0; col < data.Columns.Count; col++)
+                        // בדיקה אם זו שורת סיכום - פיצול התנאי לשלבים
+                        bool isSummaryRow = false;
+
+                        if (data.Columns.Contains("IsSummary") && data.Rows[row]["IsSummary"] != DBNull.Value)
                         {
-                            var cell = worksheet.Cells[row + 5, col + 1];
-                            var value = data.Rows[row][col];
-                            
+                            var summaryValue = data.Rows[row]["IsSummary"];
+
+                            // בדיקה אם הערך הוא Boolean
+                            if (summaryValue is bool boolValue)
+                            {
+                                isSummaryRow = boolValue;
+                            }
+                            // בדיקה אם הערך הוא מספר (1 = אמת)
+                            else if (summaryValue is int intValue)
+                            {
+                                isSummaryRow = (intValue == 1);
+                            }
+                            // בדיקה אם הערך הוא מחרוזת
+                            else if (summaryValue is string strValue)
+                            {
+                                if (bool.TryParse(strValue, out bool parsedBool))
+                                {
+                                    isSummaryRow = parsedBool;
+                                }
+                                else if (int.TryParse(strValue, out int parsedInt))
+                                {
+                                    isSummaryRow = (parsedInt == 1);
+                                }
+                            }
+                        }
+                        // בדיקה אם זו שורת סיכום לפי שדה hesder
+                        else if (data.Columns.Contains("hesder") && data.Rows[row]["hesder"] != DBNull.Value)
+                        {
+                            var hesderValue = data.Rows[row]["hesder"];
+
+                            if (hesderValue is int intValue && intValue == -1)
+                                isSummaryRow = true;
+                            else if (int.TryParse(hesderValue.ToString(), out int parsedValue) && parsedValue == -1)
+                                isSummaryRow = true;
+                        }
+
+                        // הוספת התאים (רק לעמודות גלויות)
+                        for (int colIdx = 0; colIdx < data.Columns.Count; colIdx++)
+                        {
+                            // דלג על עמודות מוסתרות
+                            if (!columnIndexMap.ContainsKey(colIdx))
+                                continue;
+
+                            int excelColIdx = columnIndexMap[colIdx] + 1;
+                            var cell = worksheet.Cells[row + 5, excelColIdx];
+                            var value = data.Rows[row][colIdx];
+
                             cell.Value = value;
-                            
-                            // עיצוב תא
                             cell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
-                            
+
+                            // עיצוב שורת סיכום
+                            if (isSummaryRow)
+                            {
+                                cell.Style.Font.Bold = true;
+                                cell.Style.Font.Color.SetColor(Color.FromArgb(0, 85, 170)); // כחול
+                                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                                cell.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(240, 248, 255)); // רקע כחול בהיר
+                            }
+
                             // התאמת סוג נתונים
                             if (value is decimal || value is double || value is float)
                             {
@@ -155,15 +226,24 @@ namespace ReportGenerator.Core.Generators
                             }
                         }
                     }
-                    
+
                     // התאמת רוחב עמודות
                     worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
                 }
-                
+
                 return package.GetAsByteArray();
             }
         }
-        
+
+        private void FormatSummaryRow(ExcelWorksheet worksheet, int rowIndex, int columnsCount)
+        {
+            var rowRange = worksheet.Cells[rowIndex, 1, rowIndex, columnsCount];
+            rowRange.Style.Font.Bold = true;
+            rowRange.Style.Font.Color.SetColor(System.Drawing.Color.FromArgb(0, 85, 170));
+            rowRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            rowRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(240, 248, 255));
+        }
+
         /// <summary>
         /// מקבל את השם העברי של עמודה מתוך מילון המיפויים
         /// </summary>

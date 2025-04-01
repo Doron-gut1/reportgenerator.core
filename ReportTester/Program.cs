@@ -18,7 +18,7 @@ class Program
 
             string templatePath = @"..\..\..\..\ReportGenerator.Core\Generators\Examples";
             string reportName = "ArnSummaryComplexReport";
-            OutputFormat outFormat = OutputFormat.PDF;
+            OutputFormat outFormat = OutputFormat.Excel;
             var reportManager = new ReportManager(connectionString, templatePath);
             var parameters = new object[] {
                   "mnt", 275, DbType.Int32,       // חודש מרץ

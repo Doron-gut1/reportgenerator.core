@@ -16,6 +16,7 @@ namespace ReportGenerator.Core.Generators
     {
         private readonly Dictionary<string, string> _columnMappings;
         private readonly IHandlebars _handlebars;
+
         /// <summary>
         /// יוצר מופע חדש של מעבד תבניות
         /// </summary>
@@ -57,10 +58,77 @@ namespace ReportGenerator.Core.Generators
             // 2. החלפת כותרות בעברית
             result = ProcessHeaders(result);
 
-            // 3. טיפול בטבלאות דינמיות - משתמשים בגרסה הפשוטה
+            // 3. טיפול בטבלאות דינמיות עם תבניות
             result = ProcessDynamicTables(result, dataTables);
 
+            // 4. טיפול בתנאים גלובליים (שלא בתוך טבלאות דינמיות)
+            if (dataTables != null && dataTables.Count > 0)
+            {
+                // מציאת "טבלת ברירת מחדל" - ניקח את הראשונה אם יש יותר מאחת
+                var defaultTable = GetDefaultDataTable(dataTables);
+
+                if (defaultTable != null && defaultTable.Rows.Count > 0)
+                {
+                    // מחפשים שורת סיכום כברירת מחדל (בהנחה שהיא קיימת)
+                    DataRow summaryRow = FindSummaryRow(defaultTable);
+
+                    // שימוש בשורת הסיכום או בשורה הראשונה אם אין סיכום
+                    DataRow row = summaryRow ?? defaultTable.Rows[0];
+
+                    // עיבוד תנאים גלובליים בתבנית
+                    result = ProcessGlobalConditions(result, row);
+                }
+            }
+
             return result;
+        }
+
+        /// <summary>
+        /// מחפש שורת סיכום לפי שדה hesder = -1
+        /// </summary>
+        private DataRow FindSummaryRow(DataTable table)
+        {
+            if (table.Columns.Contains("hesder"))
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    if (row["hesder"] != DBNull.Value)
+                    {
+                        if (row["hesder"] is int intValue && intValue == -1)
+                            return row;
+
+                        if (int.TryParse(row["hesder"].ToString(), out int parsedValue) && parsedValue == -1)
+                            return row;
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// מקבל את טבלת ברירת המחדל לעיבוד תנאים גלובליים
+        /// </summary>
+        private DataTable GetDefaultDataTable(Dictionary<string, DataTable> dataTables)
+        {
+            // נסה למצוא את טבלת הנתונים של השלב החשוב ביותר
+            string[] preferredTables = new[]
+            {
+                "GetArnPaymentMethodSummary",
+                "dbo.GetArnPaymentMethodSummary",
+                "GetArnSummaryPeriodic",
+                "dbo.GetArnSummaryPeriodic"
+            };
+
+            foreach (var tableName in preferredTables)
+            {
+                if (dataTables.ContainsKey(tableName) && dataTables[tableName].Rows.Count > 0)
+                {
+                    return dataTables[tableName];
+                }
+            }
+
+            // אם לא מצאנו אחת מהטבלאות המועדפות, נחזיר את הראשונה
+            return dataTables.Values.FirstOrDefault(t => t.Rows.Count > 0);
         }
 
         private string ProcessSimplePlaceholders(string template, Dictionary<string, object> values)
@@ -82,43 +150,129 @@ namespace ReportGenerator.Core.Generators
             return template;
         }
 
-        private string ProcessSimpleConditions(string html, DataRow row)
+        /// <summary>
+        /// מעבד תנאים בתחביר Handlebars בשורות של טבלאות
+        /// </summary>
+        private string ProcessHandlebarsConditions(string html, DataRow row)
         {
-            // תבנית לתנאי שוויון: {{#if FieldName == Value}}...{{else}}...{{/if}}
-            string pattern = @"\{\{#if\s+([^\s]+)\s*==\s*(\d+)\}\}(.*?)\{\{else\}\}(.*?)\{\{/if\}\}";
+            try
+            {
+                // תבנית מורחבת לתנאי if-else בתחביר Handlebars
+                string pattern = @"\{\{#if\s+([^\s]+)\s*==\s*(-?\d+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{/if\}\}";
+                //Console.WriteLine($"pattern: {pattern}");
 
-            return Regex.Replace(html, pattern, match => {
-                string fieldName = match.Groups[1].Value;
-                string valueStr = match.Groups[2].Value;
-                string trueContent = match.Groups[3].Value;
-                string falseContent = match.Groups[4].Value;
+                var matches = Regex.Matches(html, pattern);
+               // Console.WriteLine($"matches.Count: {matches.Count}");
 
-                // בדיקה אם השדה קיים בשורה
-                if (row.Table.Columns.Contains(fieldName))
-                {
-                    // השוואת הערכים
-                    var fieldValue = row[fieldName];
+                return Regex.Replace(html, pattern, match => {
+                    string fieldName = match.Groups[1].Value;
+                    string valueStr = match.Groups[2].Value;
+                    string trueContent = match.Groups[3].Value;
+                    string falseContent = match.Groups[4].Value;
 
-                    // המרת הערך לשורת השוואה
-                    if (int.TryParse(valueStr, out int compareValue) &&
-                        fieldValue != DBNull.Value)
+                    // בדיקה אם השדה קיים בשורה
+                    if (row.Table.Columns.Contains(fieldName))
                     {
-                        // בדיקת שוויון
-                        if (fieldValue is int intValue && intValue == compareValue)
-                            return trueContent;
+                        // השוואת הערכים
+                        object fieldValue = row[fieldName];
+                        if (fieldValue == DBNull.Value)
+                            return falseContent;
 
-                        if (int.TryParse(fieldValue.ToString(), out int parsedValue) &&
-                            parsedValue == compareValue)
-                            return trueContent;
+                        // המרת הערך לשורת השוואה
+                        if (int.TryParse(valueStr, out int compareValue))
+                        {
+                            // טיפול במספרים שלמים
+                            if (fieldValue is int intValue && intValue == compareValue)
+                                return trueContent;
+
+                            // ניסיון המרה של ערכים אחרים למספר שלם
+                            if (int.TryParse(fieldValue.ToString(), out int parsedValue) &&
+                                parsedValue == compareValue)
+                                return trueContent;
+                        }
                     }
+
+                    // אם לא מצאנו התאמה, החזר את החלק השלילי
+                    return falseContent;
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"שגיאה בעיבוד תנאים: {ex.Message}");
+                return html; // מחזיר את ה-HTML המקורי במקרה של שגיאה
+            }
+        }
+
+        /// <summary>
+        /// מעבד תנאים גלובליים (לא בתוך טבלאות דינמיות)
+        /// </summary>
+        private string ProcessGlobalConditions(string html, DataRow dataRow)
+        {
+            try
+            {
+                // קטעים בעייתיים שמכילים תנאים בצורה לא תקינה
+                var problematicSections = new List<(string start, string end)>
+                {
+                    ("<tbody>", "</tbody>"),
+                    ("<tr>", "</tr>"),
+                    ("<table", "</table>")
+                };
+
+                foreach (var section in problematicSections)
+                {
+                    html = ProcessConditionsInSection(html, section.start, section.end, dataRow);
                 }
 
-                // אם לא מצאנו התאמה, החזר את החלק השלילי
-                return falseContent;
-            });
+                return html;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"שגיאה בעיבוד תנאים גלובליים: {ex.Message}");
+                return html;
+            }
         }
-        // פונקציה להחלפת תנאים בסיסיים בHTML (תנאי IsSummary)
-      
+
+        /// <summary>
+        /// מעבד תנאים בקטע מסוים של ה-HTML
+        /// </summary>
+        private string ProcessConditionsInSection(string html, string startTag, string endTag, DataRow dataRow)
+        {
+            int startIndex = 0;
+
+            while (true)
+            {
+                // מציאת הקטע הבא
+                int sectionStart = html.IndexOf(startTag, startIndex, StringComparison.OrdinalIgnoreCase);
+                if (sectionStart < 0) break;
+
+                int sectionEnd = html.IndexOf(endTag, sectionStart + startTag.Length, StringComparison.OrdinalIgnoreCase);
+                if (sectionEnd < 0) break;
+
+                // חילוץ הקטע
+                string section = html.Substring(sectionStart, sectionEnd - sectionStart + endTag.Length);
+
+                // בדיקה אם יש תנאים בקטע
+                if (section.Contains("{{#if") && section.Contains("{{else}}") && section.Contains("{{/if}}"))
+                {
+                    // עיבוד התנאים בקטע
+                    string processedSection = ProcessHandlebarsConditions(section, dataRow);
+
+                    // החלפת הקטע המקורי בקטע המעובד
+                    html = html.Substring(0, sectionStart) + processedSection + html.Substring(sectionEnd + endTag.Length);
+
+                    // עדכון אינדקס ההתחלה לחיפוש הבא
+                    startIndex = sectionStart + processedSection.Length;
+                }
+                else
+                {
+                    // אם אין תנאים, המשך לקטע הבא
+                    startIndex = sectionEnd + endTag.Length;
+                }
+            }
+
+            return html;
+        }
+
         /// <summary>
         /// מקבל את השם העברי של עמודה לפי שם העמודה באנגלית
         /// מפעיל לוגיקת זיהוי ופיצול של שמות שדות
@@ -174,9 +328,6 @@ namespace ReportGenerator.Core.Generators
         /// <summary>
         /// מעבד טבלאות דינמיות בתבנית - מחליף שורה אחת במספר שורות לפי הנתונים
         /// </summary>
-        /// <summary>
-        /// מעבד טבלאות דינמיות בתבנית - מחליף שורה אחת במספר שורות לפי הנתונים
-        /// </summary>
         private string ProcessDynamicTables(string template, Dictionary<string, DataTable> dataTables)
         {
             if (dataTables == null || dataTables.Count == 0)
@@ -189,7 +340,6 @@ namespace ReportGenerator.Core.Generators
 
             foreach (Match match in tableRowMatches)
             {
-                // שינוי: שם הטבלה עכשיו בקבוצה 2 במקום 1
                 string tagName = match.Groups[1].Value;
                 string tableName = match.Groups[2].Value;
                 string rowTemplate = match.Groups[3].Value;
@@ -213,8 +363,8 @@ namespace ReportGenerator.Core.Generators
                 {
                     string currentRow = rowTemplate;
 
-                    // עיבוד תנאים פשוטים - הוספת הקריאה לפונקציה החדשה
-                    currentRow = ProcessSimpleConditions(currentRow, row);
+                    // עיבוד תנאים בתחביר Handlebars
+                    currentRow = ProcessHandlebarsConditions(currentRow, row);
 
                     // החלפת פלייסהולדרים בערכים
                     foreach (DataColumn col in dataTable.Columns)
@@ -222,14 +372,15 @@ namespace ReportGenerator.Core.Generators
                         string placeholder = $"{{{{{col.ColumnName}}}}}";
                         string value = FormatValue(row[col]);
 
-                        // בדיקה אם הפלייסהולדר קיים בתבנית
                         if (currentRow.Contains(placeholder))
                         {
                             currentRow = currentRow.Replace(placeholder, value);
                         }
                     }
-                    
-                    // הסרת <tr> כי אנחנו מוסיפים שורה עם תג tr
+
+                    // שינוי כאן - לא מוסיפים תגי TR נוספים
+                    //                        rowsBuilder.AppendLine($"<tr>{currentRow}</tr>");
+
                     if (tagName.ToLower() == "tr")
                         rowsBuilder.AppendLine($"<tr>{currentRow}</tr>");
                     else
@@ -323,7 +474,6 @@ namespace ReportGenerator.Core.Generators
             return value.ToString();
         }
 
-
         /// <summary>
         /// מחפש מפתח מתאים במילון הנתונים, עם התחשבות בקידומת dbo.
         /// </summary>
@@ -359,189 +509,6 @@ namespace ReportGenerator.Core.Generators
             }
 
             // לא נמצא מפתח מתאים
-            return null;
-        }
-        private string ProcessSpecialCase(string html, DataRow row)
-        {
-            try
-            {
-                // בדיקה ספציפית ל-hesder = -1
-                bool isTotal = false;
-
-                if (row.Table.Columns.Contains("hesder") &&
-                    row["hesder"] != DBNull.Value &&
-                    int.TryParse(row["hesder"].ToString(), out int hesderVal))
-                {
-                    isTotal = (hesderVal == -1);
-                }
-
-                // החלפה ישירה של תגים לסיכום
-                if (isTotal)
-                {
-                    // אם זה שורת סיכום, החלף את השורה בפורמט סיכום
-                    html = html.Replace("{{hesder}}", "<strong>סה\"כ</strong>");
-
-                    // הוסף דגש לכל הערכים
-                    foreach (DataColumn col in row.Table.Columns)
-                    {
-                        string colName = col.ColumnName;
-                        if (colName != "hesder")
-                        {
-                            string placeholder = $"{{{{{colName}}}}}";
-                            string value = FormatValue(row[colName]);
-                            html = html.Replace(placeholder, $"<strong>{value}</strong>");
-                        }
-                    }
-                }
-
-                return html;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in ProcessSpecialCase: {ex.Message}");
-                return html;
-            }
-        }
-
-        /// <summary>
-        /// מעבד תנאים בתבנית HTML בצורה גנרית
-        /// </summary>
-        private string ProcessConditions(string html, DataRow row)
-        {
-            try
-            {
-                // יצירת מילון ערכים מהשורה
-                var rowValues = new Dictionary<string, object>();
-                foreach (DataColumn col in row.Table.Columns)
-                {
-                    rowValues[col.ColumnName] = row[col] == DBNull.Value ? null : row[col];
-                }
-
-                // ביטוי רגולרי לתפיסת תנאים בכל צורה אפשרית
-                string ifPattern = @"\{\{#if\s+(.*?)\}\}(.*?)\{\{else\}\}(.*?)\{\{/if\}\}";
-
-                return Regex.Replace(html, ifPattern, match => {
-                    string condition = match.Groups[1].Value.Trim();
-                    string trueContent = match.Groups[2].Value;
-                    string falseContent = match.Groups[3].Value;
-
-                    // הערכת התנאי באמצעות המעריך הגנרי
-                    bool result = ExpressionEvaluator.Evaluate(condition, rowValues);
-
-                    return result ? trueContent : falseContent;
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error processing conditions: {ex.Message}");
-                return html;
-            }
-        }
-    }
-    /// <summary>
-    /// מחלקה להערכת ביטויים תנאיים פשוטים
-    /// </summary>
-    public class ExpressionEvaluator
-    {
-        /// <summary>
-        /// מעריך ביטוי תנאי בהתבסס על מילון ערכים
-        /// </summary>
-        public static bool Evaluate(string expression, Dictionary<string, object> values)
-        {
-            if (string.IsNullOrWhiteSpace(expression))
-                return false;
-
-            // ניתוח אופרטור שוויון
-            if (expression.Contains("=="))
-            {
-                string[] parts = expression.Split(new[] { "==" }, StringSplitOptions.None);
-                return CompareValues(parts[0].Trim(), parts[1].Trim(), values, (a, b) => Object.Equals(a, b));
-            }
-
-            // ניתוח אופרטור אי-שוויון
-            if (expression.Contains("!="))
-            {
-                string[] parts = expression.Split(new[] { "!=" }, StringSplitOptions.None);
-                return CompareValues(parts[0].Trim(), parts[1].Trim(), values, (a, b) => !Object.Equals(a, b));
-            }
-
-            // ניתוח אופרטור גדול מ
-            if (expression.Contains(">"))
-            {
-                string[] parts = expression.Split(new[] { ">" }, StringSplitOptions.None);
-                return CompareValues(parts[0].Trim(), parts[1].Trim(), values, (a, b) => {
-                    if (a is IComparable c1 && b is IComparable)
-                        return c1.CompareTo(b) > 0;
-                    return false;
-                });
-            }
-
-            // ניתוח אופרטור קטן מ
-            if (expression.Contains("<"))
-            {
-                string[] parts = expression.Split(new[] { "<" }, StringSplitOptions.None);
-                return CompareValues(parts[0].Trim(), parts[1].Trim(), values, (a, b) => {
-                    if (a is IComparable c1 && b is IComparable)
-                        return c1.CompareTo(b) < 0;
-                    return false;
-                });
-            }
-
-            // בדיקה של קיום פשוט (אם השדה קיים ולא null)
-            if (values.TryGetValue(expression, out var value))
-            {
-                return value != null && value != DBNull.Value && !string.IsNullOrEmpty(value.ToString());
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// מבצע השוואה בין שני ערכים לפי אופרטור
-        /// </summary>
-        private static bool CompareValues(string left, string right, Dictionary<string, object> values,
-                                        Func<object, object, bool> compareFunc)
-        {
-            object leftValue = ParseValue(left, values);
-            object rightValue = ParseValue(right, values);
-
-            // המרה של סוגי נתונים אם צריך
-            if (leftValue != null && rightValue != null)
-            {
-                if (leftValue is string && rightValue is int)
-                    leftValue = int.TryParse(leftValue.ToString(), out var intVal) ? intVal : leftValue;
-                else if (leftValue is int && rightValue is string)
-                    rightValue = int.TryParse(rightValue.ToString(), out var intVal) ? intVal : rightValue;
-                else if (leftValue is string && rightValue is double)
-                    leftValue = double.TryParse(leftValue.ToString(), out var doubleVal) ? doubleVal : leftValue;
-                else if (leftValue is double && rightValue is string)
-                    rightValue = double.TryParse(rightValue.ToString(), out var doubleVal) ? doubleVal : rightValue;
-            }
-
-            return compareFunc(leftValue, rightValue);
-        }
-
-        /// <summary>
-        /// מנתח ערך מביטוי (קבוע או שם שדה)
-        /// </summary>
-        private static object ParseValue(string expression, Dictionary<string, object> values)
-        {
-            // בדיקה אם מדובר בקבוע מספרי
-            if (int.TryParse(expression, out int intValue))
-                return intValue;
-
-            // בדיקה אם מדובר בקבוע עשרוני
-            if (double.TryParse(expression, out double doubleValue))
-                return doubleValue;
-
-            // בדיקה אם מדובר במחרוזת
-            if (expression.StartsWith("'") && expression.EndsWith("'"))
-                return expression.Substring(1, expression.Length - 2);
-
-            // אחרת, זהו שם שדה - קבלת הערך מהמילון
-            if (values.TryGetValue(expression, out var value))
-                return value;
-
             return null;
         }
     }

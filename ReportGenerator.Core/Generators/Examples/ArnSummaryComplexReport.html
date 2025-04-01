@@ -137,6 +137,13 @@
             padding-top: 8px;
             padding-bottom: 8px;
         }
+
+        /* סלקטור ייחודי לתאי סיכום */
+        td.payment-total {
+            font-weight: bold;
+            color: #0055aa !important;
+            background-color: #f0f8ff !important;
+        }
     </style>
 </head>
 <body>
@@ -162,7 +169,6 @@
         <!-- סיכום חיוב תקופתי -->
         <div class="summary-box">
             <div class="summary-title">סיכום חיוב תקופתי</div>
-
             <!-- טבלה מתוקנת עם שורה בודדת עם data-table-row -->
             <div data-table-row="GetArnSummaryPeriodic" class="summary-data">
                 <table class="summary-table">
@@ -247,12 +253,21 @@
             </tr>
         </thead>
         <tbody>
+            <!-- שינוי: כל שורה צריכה להיות בתוך TR עם data-table-row -->
             <tr data-table-row="GetArnPaymentMethodSummary">
+                {{#if hesder == -1}}
+                <td class="payment-total"><strong>סה"כ</strong></td>
+                <td class="amount payment-total"><strong>₪ {{paysum}}</strong></td>
+                <td class="amount payment-total"><strong>₪ {{sumhk}}</strong></td>
+                <td class="payment-total"><strong>{{cnths}}</strong></td>
+                <td class="payment-total"><strong>{{cntmsp}}</strong></td>
+                {{else}}
                 <td>{{hesder}}</td>
                 <td class="amount">₪ {{paysum}}</td>
                 <td class="amount">₪ {{sumhk}}</td>
                 <td>{{cnths}}</td>
                 <td>{{cntmsp}}</td>
+                {{/if}}
             </tr>
         </tbody>
     </table>
@@ -270,10 +285,17 @@
         </thead>
         <tbody>
             <tr data-table-row="GetArnDiscountSummary">
-                <td>{{ARN_hnckod}}</td>
-                <td>{{hanmas_teur}}</td>
-                <td class="amount">₪ {{sumhan}}</td>
-                <td>{{cnths}}</td>
+                {{#if IsSummary == 1}}
+                    <td class="payment-total"><strong>סה"כ</strong></td>
+                    <td class="payment-total">{{hanmas_teur}}</td>
+                    <td class="amount payment-total">₪ {{sumhan}}</td>
+                    <td class="payment-total">{{cnths}}</td>
+                {{else}}
+                    <td>{{ARN_hnckod}}</td>
+                    <td>{{hanmas_teur}}</td>
+                    <td class="amount">₪ {{sumhan}}</td>
+                    <td>{{cnths}}</td>
+                    {{/if}}
             </tr>
         </tbody>
     </table>

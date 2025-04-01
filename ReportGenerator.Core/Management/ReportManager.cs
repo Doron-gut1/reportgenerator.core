@@ -66,12 +66,11 @@ namespace ReportGenerator.Core.Management
                 // קבלת מיפויי שמות עמודות לעברית
                 var columnMappings = await _dataAccess.GetColumnMappings(reportConfig.StoredProcName);
 
-                // עדכון מעבד התבניות עם המיפויים
-                _templateProcessor = new HtmlTemplateProcessor(columnMappings);
+                if(format == OutputFormat.PDF)               
+                    _templateProcessor = new HtmlTemplateProcessor(columnMappings);   // עדכון מעבד התבניות עם המיפויים
+                else          
+                    _excelGenerator = new ExcelGenerator(columnMappings); // עדכון מחלקת האקסל עם המיפויים
 
-                // עדכון מחלקת האקסל עם המיפויים
-                _excelGenerator = new ExcelGenerator(columnMappings);
-                
                 if (parsedParams.TryGetValue("mnt", out ParamValue mntParam) && mntParam.Value != null)
                 {
                     int mntValue = Convert.ToInt32(mntParam.Value);

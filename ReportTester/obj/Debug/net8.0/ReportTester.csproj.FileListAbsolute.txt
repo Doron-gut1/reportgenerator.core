@@ -181,4 +181,7 @@ C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\Debug\net8.0\
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\Debug\net8.0\ref\ReportTester.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Handlebars.dll
 C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Security.Cryptography.Xml.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\EPPlus.System.Drawing.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\Microsoft.Win32.SystemEvents.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\System.Drawing.Common.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\bin\Debug\net8.0\runtimes\win\lib\net8.0\Microsoft.Win32.SystemEvents.dll
