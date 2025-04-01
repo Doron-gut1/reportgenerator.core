@@ -71,6 +71,13 @@ namespace ReportGenerator.Core.Management
 
                 // עדכון מחלקת האקסל עם המיפויים
                 _excelGenerator = new ExcelGenerator(columnMappings);
+                
+                if (parsedParams.TryGetValue("mnt", out ParamValue mntParam) && mntParam.Value != null)
+                {
+                    int mntValue = Convert.ToInt32(mntParam.Value);
+                    string monthName = await _dataAccess.GetMonthName(mntValue);
+                    parsedParams.Add("mntname", new ParamValue(monthName, DbType.String));
+                }
 
                 // הרצת כל הפרוצדורות
                 var dataTables = await _dataAccess.ExecuteMultipleStoredProcedures(reportConfig.StoredProcName, parsedParams);

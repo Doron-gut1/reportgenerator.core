@@ -19,10 +19,6 @@
       "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\management\\reportmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\data\\datatableextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\data\\datatableextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|c:\\doron\\tfs\\gloabl projects\\reportgenerator.core\\reportgenerator.core\\generators\\puppeteerhtmltopdfconverter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{1729AD6D-5C7B-4074-AAAE-FC8FDE0FD3CD}|ReportGenerator.Core\\ReportGenerator.Core.csproj|solutionrelative:reportgenerator.core\\generators\\puppeteerhtmltopdfconverter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -70,7 +66,7 @@
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\HtmlTemplateProcessor.cs",
               "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlTemplateProcessor.cs*",
               "RelativeToolTip": "ReportGenerator.Core\\Generators\\HtmlTemplateProcessor.cs*",
-              "ViewState": "AgIAANIAAAAAAAAAAAAUwOgAAAAxAAAAAAAAAA==",
+              "ViewState": "AgIAABYAAAAAAAAAAAAuwCQAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-31T10:15:37.262Z",
               "EditorCaption": ""
@@ -83,7 +79,7 @@
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
               "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
               "RelativeToolTip": "ReportGenerator.Core\\Generators\\Examples\\ArnSummaryComplexReport.html",
-              "ViewState": "AgIAAOcAAAAAAAAAAAAAAP0AAABEAAAAAAAAAA==",
+              "ViewState": "AgIAAIkAAAAAAAAAAAAAABwBAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
               "WhenOpened": "2025-03-31T10:38:23.589Z",
               "EditorCaption": ""
@@ -96,22 +92,9 @@
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
               "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
               "RelativeToolTip": "ReportGenerator.Core\\Generators\\HtmlBasedPdfGenerator.cs",
-              "ViewState": "AgIAAC0AAAAAAAAAAAAYwFMAAAAUAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAFMAAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-31T06:58:52.879Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "DataTableExtensions.cs",
-              "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Data\\DataTableExtensions.cs",
-              "RelativeDocumentMoniker": "ReportGenerator.Core\\Data\\DataTableExtensions.cs",
-              "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Data\\DataTableExtensions.cs",
-              "RelativeToolTip": "ReportGenerator.Core\\Data\\DataTableExtensions.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADMAAAA8AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-04-01T06:18:40.2Z",
               "EditorCaption": ""
             },
             {
@@ -122,14 +105,14 @@
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Management\\ReportManager.cs",
               "ToolTip": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Management\\ReportManager.cs",
               "RelativeToolTip": "ReportGenerator.Core\\Management\\ReportManager.cs",
-              "ViewState": "AgIAAEUAAAAAAAAAAAAgwFcAAAAhAAAAAAAAAA==",
+              "ViewState": "AgIAADcAAAAAAAAAAIA8wGQAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-03-31T06:53:47.187Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 5,
               "Title": "DataAccess.cs",
               "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Data\\DataAccess.cs",
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Data\\DataAccess.cs",
@@ -142,7 +125,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 4,
               "Title": "PuppeteerHtmlToPdfConverter.cs",
               "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\PuppeteerHtmlToPdfConverter.cs",
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\PuppeteerHtmlToPdfConverter.cs",
@@ -155,7 +138,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 6,
               "Title": "Microsoft.Common.CurrentVersion.targets",
               "DocumentMoniker": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
               "RelativeDocumentMoniker": "..\\..\\..\\..\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
@@ -168,7 +151,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 7,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportTester\\Program.cs",
               "RelativeDocumentMoniker": "ReportTester\\Program.cs",
@@ -181,7 +164,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 8,
               "Title": "ArnMonthlyReport.html",
               "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\Examples\\ArnMonthlyReport.html",
@@ -194,7 +177,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 9,
               "Title": "SampleTemplate.html",
               "DocumentMoniker": "C:\\doron\\TFS\\gloabl projects\\ReportGenerator.Core\\ReportGenerator.Core\\Generators\\SampleTemplate.html",
               "RelativeDocumentMoniker": "ReportGenerator.Core\\Generators\\SampleTemplate.html",
@@ -207,7 +190,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 10,
               "Title": "PdfTools.cs",
               "DocumentMoniker": "C:\\Users\\dorong\\AppData\\Local\\Temp\\.vsdbgsrc\\f3a2544e64ae705ec62400647a6cbcb5f950f7193430d5685a966128f4aefcb0\\PdfTools.cs",
               "RelativeDocumentMoniker": "..\\..\\..\\..\\Users\\dorong\\AppData\\Local\\Temp\\.vsdbgsrc\\f3a2544e64ae705ec62400647a6cbcb5f950f7193430d5685a966128f4aefcb0\\PdfTools.cs",

@@ -248,19 +248,11 @@
         </thead>
         <tbody>
             <tr data-table-row="GetArnPaymentMethodSummary">
-                {{#if IsSummary == 1}}
-                <td><strong>סה"כ</strong></td>
-                <td class="amount"><strong>₪ {{paysum}}</strong></td>
-                <td class="amount"><strong>₪ {{sumhk}}</strong></td>
-                <td><strong>{{cnths}}</strong></td>
-                <td><strong>{{cntmsp}}</strong></td>
-                {{else}}
                 <td>{{hesder}}</td>
                 <td class="amount">₪ {{paysum}}</td>
                 <td class="amount">₪ {{sumhk}}</td>
                 <td>{{cnths}}</td>
                 <td>{{cntmsp}}</td>
-                {{/if}}
             </tr>
         </tbody>
     </table>
