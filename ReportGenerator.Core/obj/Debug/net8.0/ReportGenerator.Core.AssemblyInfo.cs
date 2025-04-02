@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ReportGenerator.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+efae065764b729c4058aa46d99469bf3c8508989")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+910ff1eb672a4959c0a139c803cb81d2fbd34454")]
 [assembly: System.Reflection.AssemblyProductAttribute("ReportGenerator.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ReportGenerator.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -17,12 +17,13 @@ class Program
             string connectionString = "Server=epr-803-sql\\qa2016;Database=BrnGviaDev;Trusted_Connection=True;TrustServerCertificate=True;";
 
             string templatePath = @"..\..\..\..\ReportGenerator.Core\Generators\Examples";
-            string reportName = "ArnSummaryComplexReport";
-            OutputFormat outFormat = OutputFormat.Excel;
+            string reportName = "TrfbysugtsSummaryReport";
+            OutputFormat outFormat = OutputFormat.PDF;
             var reportManager = new ReportManager(connectionString, templatePath);
             var parameters = new object[] {
                   "mnt", 275, DbType.Int32,       // חודש מרץ
-                "isvkod",0 , DbType.Int32     // קוד ישוב ספציפי
+                "isvkod",null , DbType.Int32 ,    // קוד ישוב ספציפי
+                "sugtslist","706", DbType.String 
              };
 
             // הרצת הדוח

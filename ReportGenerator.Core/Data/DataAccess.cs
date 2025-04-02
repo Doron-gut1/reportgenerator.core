@@ -38,26 +38,91 @@ namespace ReportGenerator.Core.Data
                 new { Mnt = mnt });
         }
 
-        /// <summary>
-        /// מקבל את כותרת הדוח
-        /// </summary>
-        /// <param name="reportName">שם הדוח</param>
-        /// <returns>כותרת הדוח</returns>
-        //public async Task<string> GetReportTitle(string reportName)
-        //{
-        //    using var connection = new SqlConnection(_connectionString);
-        //    var result = await connection.QuerySingleOrDefaultAsync<string>(
-        //        "SELECT Title FROM ReportsGenerator WHERE ReportName = @ReportName",
-        //        new { ReportName = reportName });
+        public async Task<string> GetSugtsName(int sugts)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var result = await connection.QuerySingleOrDefaultAsync<string>(
+                "SELECT dbo.SugtsName(@Sugts)",
+                new { Sugts = sugts });
 
-        //    return result ?? throw new Exception($"Report Name {reportName} not found");
-        //}
+            return result ?? $"סוג חיוב {sugts}"; // החזרת ברירת מחדל אם לא נמצא ערך
+        }
+
+        public async Task<string> GetIshvName(int isvkod)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            try
+            {
+                // הערה: יש ליצור פונקציית SQL מתאימה (IsvName) או לשלוף ישירות מטבלת יישובים
+                var result = await connection.QuerySingleOrDefaultAsync<string>(
+                    "SELECT name FROM ishuv WHERE isvkod = @Isvkod",
+                    new { Isvkod = isvkod });
+
+                return result ?? $"יישוב {isvkod}"; // החזרת ברירת מחדל אם לא נמצא
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"שגיאה בשליפת שם יישוב {isvkod}: {ex.Message}");
+                return $"יישוב {isvkod}"; // החזרת ברירת מחדל במקרה של שגיאה
+            }
+        }
 
         /// <summary>
-        /// מקבל את כל המידע על דוח מטבלת ההגדרות
+        /// מאפשר שליפת שמות מרובים לקודים (למקרה של רשימות)
         /// </summary>
-        /// <param name="reportName">שם הדוח</param>
-        /// <returns>אובייקט עם מידע על הדוח</returns>
+        /// <param name="codes">רשימת קודים מופרדים בפסיקים</param>
+        /// <param name="tableName">שם הטבלה לשליפה</param>
+        /// <param name="codeField">שם שדה הקוד</param>
+        /// <param name="nameField">שם שדה השם</param>
+        /// <returns>מחרוזת עם השמות מופרדים בפסיקים</returns>
+        public async Task<string> GetCodeNames(string codes, string tableName, string codeField, string nameField)
+        {
+            if (string.IsNullOrEmpty(codes))
+                return "הכל";
+
+            using var connection = new SqlConnection(_connectionString);
+            try
+            {
+                // פירוק מחרוזת הקודים
+                var codesList = codes.Split(',')
+                    .Select(x => x.Trim())
+                    .Where(x => !string.IsNullOrEmpty(x))
+                    .Select(x => int.Parse(x))
+                    .ToList();
+
+                if (!codesList.Any())
+                    return "הכל";
+
+                // יצירת פרמטר טבלאי
+                var table = new DataTable();
+                table.Columns.Add("Value", typeof(int));
+
+                foreach (var code in codesList)
+                {
+                    table.Rows.Add(code);
+                }
+
+                // שליפת השמות
+                var query = $@"
+            SELECT {nameField}
+            FROM {tableName}
+            WHERE {codeField} IN (SELECT Value FROM @Codes)
+            ORDER BY {nameField}";
+
+                var names = await connection.QueryAsync<string>(
+                    query,
+                    new { Codes = table.AsTableValuedParameter("IntList") });
+
+                // הרכבת מחרוזת התוצאה
+                return string.Join(", ", names);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"שגיאה בשליפת שמות עבור קודים {codes}: {ex.Message}");
+                return codes; // החזרת הקודים המקוריים במקרה של שגיאה
+            }
+        }
+
         public async Task<ReportConfig> GetReportConfig(string reportName)
         {
             using var connection = new SqlConnection(_connectionString);
@@ -264,7 +329,7 @@ namespace ReportGenerator.Core.Data
                             paramValue.Value ?? DBNull.Value,
                             paramValue.Type);
 
-                        Console.WriteLine($"הוספת פרמטר לפרוצדורה {spName}: {procParam.Name} = {paramValue.Value}");
+                        //Console.WriteLine($"הוספת פרמטר לפרוצדורה {spName}: {procParam.Name} = {paramValue.Value}");
                     }
                     else if (!procParam.IsOptional)
                     {
@@ -316,18 +381,18 @@ namespace ReportGenerator.Core.Data
         ORDER BY p.parameter_id",
         new { ProcName = cleanProcName });
     
-    if (!result.Any())
-    {
-        Console.WriteLine($"לא נמצאו פרמטרים לפרוצדורה {procName}");
-    }
-    else
-    {
-        Console.WriteLine($"נמצאו {result.Count()} פרמטרים לפרוצדורה {procName}");
-        foreach (var param in result)
-        {
-            Console.WriteLine($"פרמטר: {param.Name}, סוג: {param.DataType}, אופציונלי: {param.IsOptional}");
-        }
-    }
+    //if (!result.Any())
+    //{
+    //    Console.WriteLine($"לא נמצאו פרמטרים לפרוצדורה {procName}");
+    //}
+    //else
+    //{
+    //   // Console.WriteLine($"נמצאו {result.Count()} פרמטרים לפרוצדורה {procName}");
+    //    foreach (var param in result)
+    //    {
+    //        Console.WriteLine($"פרמטר: {param.Name}, סוג: {param.DataType}, אופציונלי: {param.IsOptional}");
+    //    }
+    //}
     
     return result;
 }

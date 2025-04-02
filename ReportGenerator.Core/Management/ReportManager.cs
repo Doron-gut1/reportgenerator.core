@@ -71,12 +71,7 @@ namespace ReportGenerator.Core.Management
                 else          
                     _excelGenerator = new ExcelGenerator(columnMappings); // עדכון מחלקת האקסל עם המיפויים
 
-                if (parsedParams.TryGetValue("mnt", out ParamValue mntParam) && mntParam.Value != null)
-                {
-                    int mntValue = Convert.ToInt32(mntParam.Value);
-                    string monthName = await _dataAccess.GetMonthName(mntValue);
-                    parsedParams.Add("mntname", new ParamValue(monthName, DbType.String));
-                }
+                parsedParams = await ProcessSpecialParameters(parsedParams);
 
                 // הרצת כל הפרוצדורות
                 var dataTables = await _dataAccess.ExecuteMultipleStoredProcedures(reportConfig.StoredProcName, parsedParams);
@@ -134,6 +129,128 @@ namespace ReportGenerator.Core.Management
             catch (Exception ex)
             {
                 throw new ArgumentException("Error parsing parameters array", ex);
+            }
+        }
+
+        /// <summary>
+        /// מטפל בפרמטרים מיוחדים ומחשב פרמטרים נגזרים כגון שמות
+        /// </summary>
+        /// <param name="parameters">מילון הפרמטרים המקורי</param>
+        /// <returns>מילון מעודכן עם פרמטרים נוספים</returns>
+        private async Task<Dictionary<string, ParamValue>> ProcessSpecialParameters(Dictionary<string, ParamValue> parameters)
+        {
+            // יצירת עותק של מילון הפרמטרים כדי לא לשנות את המקורי
+            var enhancedParams = new Dictionary<string, ParamValue>(parameters, StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                // טיפול בפרמטר חודש (mnt) - הוספת שם החודש
+                if (enhancedParams.TryGetValue("mnt", out ParamValue mntParam) && mntParam.Value != null)
+                {
+                    int mntValue = Convert.ToInt32(mntParam.Value);
+                    string monthName = await _dataAccess.GetMonthName(mntValue);
+
+                    if (!enhancedParams.ContainsKey("mntname"))
+                    {
+                        enhancedParams.Add("mntname", new ParamValue(monthName, DbType.String));
+                    }
+                }
+
+                // טיפול בפרמטר סוג חיוב (sugts) - הוספת שם סוג החיוב
+                if (enhancedParams.TryGetValue("sugts", out ParamValue sugtsParam) && sugtsParam.Value != null)
+                {
+                    int sugtsValue = Convert.ToInt32(sugtsParam.Value);
+                    string sugtsName = await _dataAccess.GetSugtsName(sugtsValue);
+
+                    if (!enhancedParams.ContainsKey("sugtsname"))
+                    {
+                        enhancedParams.Add("sugtsname", new ParamValue(sugtsName, DbType.String));
+                    }
+                }
+                // טיפול בפרמטר רשימת סוגי חיוב (sugtslist)
+                else if (enhancedParams.TryGetValue("sugtslist", out ParamValue sugtsListParam) && sugtsListParam.Value != null)
+                {
+                    string sugtsListValue = sugtsListParam.Value.ToString();
+
+                    // בדיקה אם מדובר ברשימה עם ערך אחד בלבד
+                    if (!string.IsNullOrEmpty(sugtsListValue) && !sugtsListValue.Contains(","))
+                    {
+                        // אם יש רק ערך אחד, נשלוף את שם סוג החיוב
+                        if (int.TryParse(sugtsListValue, out int singleSugtsValue))
+                        {
+                            string sugtsName = await _dataAccess.GetSugtsName(singleSugtsValue);
+
+                            if (!enhancedParams.ContainsKey("sugtsname"))
+                            {
+                                enhancedParams.Add("sugtsname", new ParamValue(sugtsName, DbType.String));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // אם יש מספר ערכים, נוסיף פרמטר עם הערה כללית
+                        if (!enhancedParams.ContainsKey("sugtsname"))
+                        {
+                            enhancedParams.Add("sugtsname", new ParamValue("מספר סוגי חיוב", DbType.String));
+                        }
+                    }
+                }
+                else
+                {
+                    // אם לא נמצאו פרמטרים של סוג חיוב, נוסיף ערך ברירת מחדל
+                    if (!enhancedParams.ContainsKey("sugtsname"))
+                    {
+                        enhancedParams.Add("sugtsname", new ParamValue("כל סוגי החיוב", DbType.String));
+                    }
+                }
+
+                // טיפול בפרמטר יישוב (isvkod) - הוספת שם יישוב
+                if (enhancedParams.TryGetValue("isvkod", out ParamValue isvkodParam) && isvkodParam.Value != null)
+                {
+                    string isvkodValue = isvkodParam.Value.ToString();
+                
+                    // בדיקה אם מדובר ברשימה או בערך בודד
+                    if (!string.IsNullOrEmpty(isvkodValue) && !isvkodValue.Contains(","))
+                    {
+                        // אם יש רק ערך אחד, נשלוף את שם היישוב
+                        if (int.TryParse(isvkodValue, out int singleIsvkodValue))
+                        {
+                            // יש להוסיף מתודה לשליפת שם יישוב
+                            // string isvName = await _dataAccess.GetIsvName(singleIsvkodValue);
+                            isvkodValue= await _dataAccess.GetIshvName(singleIsvkodValue);
+                            string isvName = $"יישוב {singleIsvkodValue}"; // כברירת מחדל עד שתיווצר המתודה
+
+                            if (!enhancedParams.ContainsKey("ishvname"))
+                            {
+                                enhancedParams.Add("ishvname", new ParamValue(isvName, DbType.String));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // אם יש מספר ערכים, נוסיף פרמטר עם הערה כללית
+                        if (!enhancedParams.ContainsKey("ishvname"))
+                        {
+                            enhancedParams.Add("ishvname", new ParamValue("מספר יישובים", DbType.String));
+                        }
+                    }
+                }
+                else
+                {
+                    // אם לא נמצא פרמטר יישוב, נוסיף ערך ברירת מחדל
+                    if (!enhancedParams.ContainsKey("ishvname"))
+                    {
+                        enhancedParams.Add("ishvname", new ParamValue("כל היישובים", DbType.String));
+                    }
+                }
+
+                return enhancedParams;
+            }
+            catch (Exception ex)
+            {
+                // לוג השגיאה והחזרת הפרמטרים המקוריים
+                Console.WriteLine($"שגיאה בעיבוד פרמטרים מיוחדים: {ex.Message}");
+                return parameters;
             }
         }
     }
