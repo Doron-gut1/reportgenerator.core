@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using ReportGenerator.Core.Data.Models;
+using ReportGenerator.Core.Errors;
 using System.Data;
 
 namespace ReportGenerator.Core.Data
@@ -14,70 +15,182 @@ namespace ReportGenerator.Core.Data
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-
+        /// <summary>
         /// מקבל את שמות הפרוצדורות לשליפת נתונים עבור דוח
-
+        /// </summary>
         /// <param name="reportName">שם הדוח</param>
         /// <returns>מחרוזת עם שמות הפרוצדורות (מופרדות בפסיק נקודה)</returns>
         public async Task<string> GetStoredProcName(string reportName)
         {
-            using var connection = new SqlConnection(_connectionString);
-            var result = await connection.QuerySingleOrDefaultAsync<string>(
-                "SELECT StoredProcName FROM ReportsGenerator WHERE ReportName = @ReportName",
-                new { ReportName = reportName });
-
-            return result ?? throw new Exception($"Report Name {reportName} not found");
-        }
-
-
-        public async Task<string> GetMonthName(int mnt)
-        {
-            using var connection = new SqlConnection(_connectionString);
-            return await connection.QuerySingleOrDefaultAsync<string>(
-                "SELECT dbo.mntname(@Mnt)",
-                new { Mnt = mnt });
-        }
-
-        public async Task<string> GetPeriodName(int mnt)
-        {
-            using var connection = new SqlConnection(_connectionString);
-            return await connection.QuerySingleOrDefaultAsync<string>(
-                "SELECT dbo.PeriodName(@Mnt)",
-                new { Mnt = mnt });
-        }
-
-        public async Task<string> GetSugtsName(int sugts)
-        {
-            using var connection = new SqlConnection(_connectionString);
-            var result = await connection.QuerySingleOrDefaultAsync<string>(
-                "SELECT dbo.SugtsName(@Sugts)",
-                new { Sugts = sugts });
-
-            return result ?? $"סוג חיוב {sugts}"; // החזרת ברירת מחדל אם לא נמצא ערך
-        }
-
-        public async Task<string> GetIshvName(int isvkod)
-        {
-            using var connection = new SqlConnection(_connectionString);
             try
             {
-                // הערה: יש ליצור פונקציית SQL מתאימה (IsvName) או לשלוף ישירות מטבלת יישובים
+                using var connection = new SqlConnection(_connectionString);
+                var result = await connection.QuerySingleOrDefaultAsync<string>(
+                    "SELECT StoredProcName FROM ReportsGenerator WHERE ReportName = @ReportName",
+                    new { ReportName = reportName });
+
+                if (result == null)
+                {
+                    ErrorManager.LogError(
+                        ErrorCodes.DB.Report_NotFound, 
+                        ErrorSeverity.Critical,
+                        $"דוח בשם {reportName} לא נמצא במערכת");
+                    throw new Exception($"Report Name {reportName} not found");
+                }
+
+                return result;
+            }
+            catch (SqlException ex)
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.DB.Query_Failed,
+                    ErrorSeverity.Critical,
+                    $"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",
+                    ex);
+                throw new Exception($"SQL error retrieving stored procedures for report {reportName}", ex);
+            }
+            catch (Exception ex) when (!(ex.InnerException is SqlException) && !(ex is InvalidOperationException))
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.DB.Connection_Failed,
+                    ErrorSeverity.Critical,
+                    $"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",
+                    ex);
+                throw new Exception($"Database connection error retrieving stored procedures for report {reportName}", ex);
+            }
+        }
+
+        /// <summary>
+        /// מקבל את שם החודש לפי מספר חודש
+        /// </summary>
+        public async Task<string> GetMonthName(int mnt)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                var result = await connection.QuerySingleOrDefaultAsync<string>(
+                    "SELECT dbo.mntname(@Mnt)",
+                    new { Mnt = mnt });
+                    
+                if (result == null)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.DB.MonthName_NotFound,
+                        $"לא נמצא שם עבור חודש {mnt}");
+                    return $"חודש {mnt}";
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בשליפת שם חודש {mnt}",
+                    ex);
+                return $"חודש {mnt}";
+            }
+        }
+
+        /// <summary>
+        /// מקבל את שם התקופה לפי מספר חודש
+        /// </summary>
+        public async Task<string> GetPeriodName(int mnt)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                var result = await connection.QuerySingleOrDefaultAsync<string>(
+                    "SELECT dbo.PeriodName(@Mnt)",
+                    new { Mnt = mnt });
+                    
+                if (result == null)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.DB.MonthName_NotFound,
+                        $"לא נמצא שם תקופה עבור חודש {mnt}");
+                    return $"תקופה {mnt}";
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בשליפת שם תקופה {mnt}",
+                    ex);
+                return $"תקופה {mnt}";
+            }
+        }
+
+        /// <summary>
+        /// מקבל את שם סוג החיוב לפי קוד
+        /// </summary>
+        public async Task<string> GetSugtsName(int sugts)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                var result = await connection.QuerySingleOrDefaultAsync<string>(
+                    "SELECT dbo.SugtsName(@Sugts)",
+                    new { Sugts = sugts });
+
+                if (result == null)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.DB.SugtsName_NotFound,
+                        $"לא נמצא שם עבור סוג חיוב {sugts}");
+                    return $"סוג חיוב {sugts}";
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בשליפת שם סוג חיוב {sugts}",
+                    ex);
+                return $"סוג חיוב {sugts}";
+            }
+        }
+
+        /// <summary>
+        /// מקבל את שם היישוב לפי קוד
+        /// </summary>
+        public async Task<string> GetIshvName(int isvkod)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
                 var result = await connection.QuerySingleOrDefaultAsync<string>(
                     "SELECT name FROM ishuv WHERE isvkod = @Isvkod",
                     new { Isvkod = isvkod });
 
-                return result ?? $"יישוב {isvkod}"; // החזרת ברירת מחדל אם לא נמצא
+                if (result == null)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.DB.IshvName_NotFound,
+                        $"לא נמצא שם עבור יישוב {isvkod}");
+                    return $"יישוב {isvkod}";
+                }
+                
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"שגיאה בשליפת שם יישוב {isvkod}: {ex.Message}");
-                return $"יישוב {isvkod}"; // החזרת ברירת מחדל במקרה של שגיאה
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בשליפת שם יישוב {isvkod}",
+                    ex);
+                return $"יישוב {isvkod}";
             }
         }
 
-
+        /// <summary>
         /// מאפשר שליפת שמות מרובים לקודים (למקרה של רשימות)
-
+        /// </summary>
         /// <param name="codes">רשימת קודים מופרדים בפסיקים</param>
         /// <param name="tableName">שם הטבלה לשליפה</param>
         /// <param name="codeField">שם שדה הקוד</param>
@@ -88,9 +201,10 @@ namespace ReportGenerator.Core.Data
             if (string.IsNullOrEmpty(codes))
                 return "הכל";
 
-            using var connection = new SqlConnection(_connectionString);
             try
             {
+                using var connection = new SqlConnection(_connectionString);
+                
                 // פירוק מחרוזת הקודים
                 var codesList = codes.Split(',')
                     .Select(x => x.Trim())
@@ -126,86 +240,151 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"שגיאה בשליפת שמות עבור קודים {codes}: {ex.Message}");
-                return codes; // החזרת הקודים המקוריים במקרה של שגיאה
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בשליפת שמות עבור קודים {codes} מטבלה {tableName}",
+                    ex);
+                return codes;
             }
         }
 
+        /// <summary>
+        /// מקבל את הגדרות הדוח
+        /// </summary>
         public async Task<ReportConfig> GetReportConfig(string reportName)
         {
-            using var connection = new SqlConnection(_connectionString);
-            var result = await connection.QuerySingleOrDefaultAsync<ReportConfig>(
-                "SELECT ReportID, ReportName, StoredProcName, Title, Description " +
-                "FROM ReportsGenerator WHERE ReportName = @ReportName",
-                new { ReportName = reportName });
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                var result = await connection.QuerySingleOrDefaultAsync<ReportConfig>(
+                    "SELECT ReportID, ReportName, StoredProcName, Title, Description " +
+                    "FROM ReportsGenerator WHERE ReportName = @ReportName",
+                    new { ReportName = reportName });
 
-            return result ?? throw new Exception($"Report Name {reportName} not found");
+                if (result == null)
+                {
+                    ErrorManager.LogError(
+                        ErrorCodes.DB.Report_Config_Invalid,
+                        ErrorSeverity.Critical,
+                        $"הגדרות דוח {reportName} לא נמצאו במערכת");
+                    throw new Exception($"Report configuration for {reportName} not found");
+                }
+
+                return result;
+            }
+            catch (SqlException ex)
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.DB.Query_Failed,
+                    ErrorSeverity.Critical,
+                    $"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",
+                    ex);
+                throw new Exception($"SQL error retrieving report configuration for {reportName}", ex);
+            }
+            catch (Exception ex) when (!(ex.InnerException is SqlException) && !(ex is InvalidOperationException))
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.DB.Connection_Failed,
+                    ErrorSeverity.Critical,
+                    $"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",
+                    ex);
+                throw new Exception($"Database connection error retrieving report configuration for {reportName}", ex);
+            }
         }
 
-
+        /// <summary>
         /// בודק אם אובייקט SQL הוא פונקציה טבלאית
-
+        /// </summary>
         /// <param name="objectName">שם האובייקט ב-SQL</param>
         /// <returns>האם האובייקט הוא פונקציה טבלאית</returns>
         public async Task<bool> IsTableFunction(string objectName)
         {
-            using var connection = new SqlConnection(_connectionString);
-            var count = await connection.ExecuteScalarAsync<int>(
-                @"SELECT COUNT(1) FROM sys.objects 
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                var count = await connection.ExecuteScalarAsync<int>(
+                    @"SELECT COUNT(1) FROM sys.objects 
                   WHERE name = @Name
                   AND type IN ('IF', 'TF', 'FT')",  // IF = inline function, TF = table function, FT = CLR table-function
-                new { Name = objectName.Replace("dbo.", "") });
-            
-            return count > 0;
+                    new { Name = objectName.Replace("dbo.", "") });
+                
+                return count > 0;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בבדיקה אם {objectName} הוא פונקציה טבלאית",
+                    ex);
+                return false;
+            }
         }
 
-
+        /// <summary>
         /// מקבל מיפויים של שמות עמודות לכותרות בעברית
-
+        /// </summary>
         /// <param name="procNames">שמות הפרוצדורות/פונקציות</param>
         /// <returns>מילון עם המיפויים מאנגלית לעברית</returns>
         public async Task<Dictionary<string, string>> GetColumnMappings(string procNames)
         {
             Dictionary<string, string> mappings = new(StringComparer.OrdinalIgnoreCase);
             
-            using var connection = new SqlConnection(_connectionString);
-            
-            // פיצול שמות הפרוצדורות/פונקציות
-            var procsList = procNames.Split(';')
-                                    .Select(p => p.Trim())
-                                    .Select(p => p.Replace("dbo.", ""))
-                                    .ToArray();
-            
-            // קבלת כל המיפויים הרלוונטיים בשאילתה אחת
-            var results = await connection.QueryAsync<ColumnMapping>(
-                @"SELECT TableName, ColumnName, HebrewAlias 
-                  FROM ReportsGeneratorColumns 
-                  WHERE TableName IN @ProcNames OR TableName IN (SELECT name FROM sys.tables)",
-                new { ProcNames = procsList });
-            
-            foreach (var mapping in results)
+            try
             {
-                // שמירת המיפוי בהתאם לסוג השדה:
-                // 1. לשדות מטבלה (TableName_ColumnName)
-                if (mapping.TableName != procNames)
+                using var connection = new SqlConnection(_connectionString);
+                
+                // פיצול שמות הפרוצדורות/פונקציות
+                var procsList = procNames.Split(';')
+                                        .Select(p => p.Trim())
+                                        .Select(p => p.Replace("dbo.", ""))
+                                        .ToArray();
+                
+                // קבלת כל המיפויים הרלוונטיים בשאילתה אחת
+                var results = await connection.QueryAsync<ColumnMapping>(
+                    @"SELECT TableName, ColumnName, HebrewAlias 
+                      FROM ReportsGeneratorColumns 
+                      WHERE TableName IN @ProcNames OR TableName IN (SELECT name FROM sys.tables)",
+                    new { ProcNames = procsList });
+                
+                foreach (var mapping in results)
                 {
-                    string compositeKey = $"{mapping.TableName}_{mapping.ColumnName}";
-                    mappings[compositeKey] = mapping.HebrewAlias;
+                    // שמירת המיפוי בהתאם לסוג השדה:
+                    // 1. לשדות מטבלה (TableName_ColumnName)
+                    if (mapping.TableName != procNames)
+                    {
+                        string compositeKey = $"{mapping.TableName}_{mapping.ColumnName}";
+                        mappings[compositeKey] = mapping.HebrewAlias;
+                    }
+                    
+                    // 2. לשדות מחושבים (שם השדה בלבד)
+                    if (procsList.Contains(mapping.TableName))
+                    {
+                        mappings[mapping.ColumnName] = mapping.HebrewAlias;
+                    }
                 }
                 
-                // 2. לשדות מחושבים (שם השדה בלבד)
-                if (procsList.Contains(mapping.TableName))
+                if (mappings.Count == 0)
                 {
-                    mappings[mapping.ColumnName] = mapping.HebrewAlias;
+                    ErrorManager.LogWarning(
+                        ErrorCodes.DB.ColumnMapping_NotFound,
+                        $"לא נמצאו מיפויי עמודות עבור פרוצדורות: {procNames}");
                 }
+                
+                return mappings;
             }
-            
-            return mappings;
+            catch (Exception ex)
+            {
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בשליפת מיפויי עמודות עבור פרוצדורות: {procNames}",
+                    ex);
+                return mappings;
+            }
         }
 
-
+        /// <summary>
         /// הרצת מספר פרוצדורות או פונקציות טבלאיות ומיזוג התוצאות
-
+        /// </summary>
         /// <param name="objectNames">שמות הפרוצדורות/פונקציות (מופרדות בפסיק נקודה)</param>
         /// <param name="parameters">פרמטרים להעברה לפרוצדורות</param>
         /// <returns>מילון המכיל DataTable לכל פרוצדורה/פונקציה</returns>
@@ -243,80 +422,111 @@ namespace ReportGenerator.Core.Data
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Error executing {objectName}: {ex.Message}", ex);
+                    ErrorManager.LogError(
+                        ErrorCodes.DB.Query_Failed,
+                        ErrorSeverity.Error,
+                        $"שגיאה בהרצת {objectName}",
+                        ex);
+                    
+                    // צור טבלה ריקה כדי לא לשבור את התהליך (אם זו לא פרוצדורה קריטית)
+                    var emptyTable = new DataTable();
+                    emptyTable.Columns.Add("ERROR", typeof(string));
+                    emptyTable.Rows.Add($"Error executing {objectName}: {ex.Message}");
+                    result.Add(objectName, emptyTable);
                 }
             }
 
             return result;
         }
 
-
+        /// <summary>
         /// הרצת פונקציה טבלאית
-
+        /// </summary>
         /// <param name="functionName">שם הפונקציה</param>
         /// <param name="parameters">פרמטרים</param>
         /// <returns>טבלת נתונים עם התוצאות</returns>
         public async Task<DataTable> ExecuteTableFunction(string functionName, Dictionary<string, ParamValue> parameters)
         {
-            using var connection = new SqlConnection(_connectionString);
-            
-            // פתיחת החיבור
-            await connection.OpenAsync();
-            
-            // הכנת מחרוזת הפרמטרים
-            var paramList = new List<string>();
-            foreach (var param in parameters)
+            try
             {
-                paramList.Add($"@{param.Key}");
-            }
-            
-            string paramString = string.Join(", ", paramList);
-            
-            // בניית פקודת SQL
-            string sql = string.IsNullOrEmpty(paramString) 
-                ? $"SELECT * FROM {functionName}()"
-                : $"SELECT * FROM {functionName}({paramString})";
-            
-            // הכנת הפקודה
-            using var command = new SqlCommand(sql, connection);
-            
-            // הוספת פרמטרים
-            foreach (var param in parameters)
-            {
-                // המרה לסוג הפרמטר המתאים
-                SqlDbType sqlType = GetSqlDbType(param.Value.Type);
+                using var connection = new SqlConnection(_connectionString);
                 
-                var sqlParam = new SqlParameter($"@{param.Key}", sqlType)
+                // פתיחת החיבור
+                await connection.OpenAsync();
+                
+                // הכנת מחרוזת הפרמטרים
+                var paramList = new List<string>();
+                foreach (var param in parameters)
                 {
-                    Value = param.Value.Value ?? DBNull.Value
-                };
+                    paramList.Add($"@{param.Key}");
+                }
                 
-                command.Parameters.Add(sqlParam);
+                string paramString = string.Join(", ", paramList);
+                
+                // בניית פקודת SQL
+                string sql = string.IsNullOrEmpty(paramString) 
+                    ? $"SELECT * FROM {functionName}()"
+                    : $"SELECT * FROM {functionName}({paramString})";
+                
+                // הכנת הפקודה
+                using var command = new SqlCommand(sql, connection);
+                
+                // הוספת פרמטרים
+                foreach (var param in parameters)
+                {
+                    // המרה לסוג הפרמטר המתאים
+                    SqlDbType sqlType = GetSqlDbType(param.Value.Type);
+                    
+                    var sqlParam = new SqlParameter($"@{param.Key}", sqlType)
+                    {
+                        Value = param.Value.Value ?? DBNull.Value
+                    };
+                    
+                    command.Parameters.Add(sqlParam);
+                }
+                
+                // הרצת הפקודה
+                using var reader = await command.ExecuteReaderAsync();
+                
+                // המרה ל-DataTable
+                var dataTable = new DataTable();
+                dataTable.Load(reader);
+                
+                return dataTable;
             }
-            
-            // הרצת הפקודה
-            using var reader = await command.ExecuteReaderAsync();
-            
-            // המרה ל-DataTable
-            var dataTable = new DataTable();
-            dataTable.Load(reader);
-            
-            return dataTable;
+            catch (SqlException ex)
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.DB.TableFunc_Execution_Failed,
+                    ErrorSeverity.Error,
+                    $"שגיאת SQL בהרצת פונקציה טבלאית {functionName}",
+                    ex);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.DB.Connection_Failed,
+                    ErrorSeverity.Error,
+                    $"שגיאת התחברות או הרצה של פונקציה טבלאית {functionName}",
+                    ex);
+                throw;
+            }
         }
 
-
+        /// <summary>
         /// הרצת פרוצדורה מאוחסנת וקבלת התוצאות כטבלה
-
+        /// </summary>
         /// <param name="spName">שם הפרוצדורה</param>
         /// <param name="parameters">פרמטרים</param>
         /// <returns>טבלת נתונים עם התוצאות</returns>
         private async Task<DataTable> ExecuteStoredProcedure(string spName, Dictionary<string, ParamValue> parameters)
         {
-            using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-
             try
             {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
                 // שליפת מידע על הפרמטרים שהפרוצדורה מקבלת
                 var procParams = await GetProcedureParameters(spName);
 
@@ -336,13 +546,16 @@ namespace ReportGenerator.Core.Data
                             procParam.Name, // שם הפרמטר כפי שמוגדר בפרוצדורה
                             paramValue.Value ?? DBNull.Value,
                             paramValue.Type);
-
-                        //Console.WriteLine($"הוספת פרמטר לפרוצדורה {spName}: {procParam.Name} = {paramValue.Value}");
                     }
                     else if (!procParam.IsOptional)
                     {
-                        // אם זה פרמטר חובה שלא הועבר, זרוק שגיאה
-                        throw new Exception($"Missing required parameter {procParam.Name} for stored procedure {spName}");
+                        // אם זה פרמטר חובה שלא הועבר, רשום שגיאה
+                        ErrorManager.LogError(
+                            ErrorCodes.DB.StoredProc_MissingParam,
+                            ErrorSeverity.Error,
+                            $"פרמטר נדרש {procParam.Name} חסר עבור פרוצדורה {spName}");
+                            
+                        throw new ArgumentException($"Missing required parameter {procParam.Name} for stored procedure {spName}");
                     }
                 }
 
@@ -354,115 +567,80 @@ namespace ReportGenerator.Core.Data
 
                 return ToDataTable(result);
             }
+            catch (SqlException ex)
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.DB.StoredProc_Execution_Failed,
+                    ErrorSeverity.Error,
+                    $"שגיאת SQL בהרצת פרוצדורה {spName}",
+                    ex);
+                throw;
+            }
+            catch (ArgumentException ex)
+            {
+                // כבר נרשמה שגיאה בבדיקת הפרמטרים, רק זרוק הלאה
+                throw;
+            }
             catch (Exception ex)
             {
-                throw new Exception($"Error executing stored procedure {spName}: {ex.Message}", ex);
+                ErrorManager.LogError(
+                    ErrorCodes.DB.Connection_Failed,
+                    ErrorSeverity.Error,
+                    $"שגיאת התחברות או הרצה של פרוצדורה {spName}",
+                    ex);
+                throw;
             }
         }
 
+        /// <summary>
+        /// מקבל מידע על פרמטרים של פרוצדורה מאוחסנת
+        /// </summary>
         private async Task<IEnumerable<ParameterInfo>> GetProcedureParameters(string procName)
-{
-    // הסרת קידומת סכמה אם קיימת
-    string cleanProcName = procName;
-    if (procName.Contains("."))
-    {
-        cleanProcName = procName.Substring(procName.LastIndexOf('.') + 1);
-    }
-    
-    using var connection = new SqlConnection(_connectionString);
-    var result = await connection.QueryAsync<ParameterInfo>(
-        @"SELECT 
-            p.name as Name,
-            t.name as DataType,
-            CASE 
-                WHEN p.has_default_value = 1 THEN 'YES'  -- אם יש ערך ברירת מחדל
-                WHEN definition LIKE '%' + p.name + '%=' THEN 'YES'  -- בדיקה בהגדרת הפרוצדורה
-                ELSE 'NO' 
-            END as IsNullable,
-            p.default_value as DefaultValue,
-            p.parameter_id as ParameterOrder
-        FROM sys.parameters p
-        INNER JOIN sys.types t ON p.system_type_id = t.system_type_id
-        INNER JOIN sys.procedures sp ON p.object_id = sp.object_id
-        LEFT JOIN sys.sql_modules m ON sp.object_id = m.object_id
-        WHERE sp.name = @ProcName
-        ORDER BY p.parameter_id",
-        new { ProcName = cleanProcName });
-    
-    //if (!result.Any())
-    //{
-    //    Console.WriteLine($"לא נמצאו פרמטרים לפרוצדורה {procName}");
-    //}
-    //else
-    //{
-    //   // Console.WriteLine($"נמצאו {result.Count()} פרמטרים לפרוצדורה {procName}");
-    //    foreach (var param in result)
-    //    {
-    //        Console.WriteLine($"פרמטר: {param.Name}, סוג: {param.DataType}, אופציונלי: {param.IsOptional}");
-    //    }
-    //}
-    
-    return result;
-}
+        {
+            try
+            {
+                // הסרת קידומת סכמה אם קיימת
+                string cleanProcName = procName;
+                if (procName.Contains("."))
+                {
+                    cleanProcName = procName.Substring(procName.LastIndexOf('.') + 1);
+                }
+                
+                using var connection = new SqlConnection(_connectionString);
+                var result = await connection.QueryAsync<ParameterInfo>(
+                    @"SELECT 
+                        p.name as Name,
+                        t.name as DataType,
+                        CASE 
+                            WHEN p.has_default_value = 1 THEN 'YES'  -- אם יש ערך ברירת מחדל
+                            WHEN definition LIKE '%' + p.name + '%=' THEN 'YES'  -- בדיקה בהגדרת הפרוצדורה
+                            ELSE 'NO' 
+                        END as IsNullable,
+                        p.default_value as DefaultValue,
+                        p.parameter_id as ParameterOrder
+                    FROM sys.parameters p
+                    INNER JOIN sys.types t ON p.system_type_id = t.system_type_id
+                    INNER JOIN sys.procedures sp ON p.object_id = sp.object_id
+                    LEFT JOIN sys.sql_modules m ON sp.object_id = m.object_id
+                    WHERE sp.name = @ProcName
+                    ORDER BY p.parameter_id",
+                    new { ProcName = cleanProcName });
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    $"שגיאה בשליפת מידע על פרמטרים של הפרוצדורה {procName}",
+                    ex);
+                return Enumerable.Empty<ParameterInfo>();
+            }
+        }
 
-
-        /// מיזוג טבלאות נתונים
-
-        //private void MergeDataTables(DataTable mainTable, DataTable newData)
-        //{
-        //    // אם הטבלה הראשית ריקה, נוסיף את כל העמודות
-        //    if (mainTable.Columns.Count == 0)
-        //    {
-        //        foreach (DataColumn col in newData.Columns)
-        //        {
-        //            mainTable.Columns.Add(col.ColumnName, col.DataType);
-        //        }
-        //    }
-        //    // אם יש עמודות חדשות, נוסיף אותן
-        //    else
-        //    {
-        //        foreach (DataColumn col in newData.Columns)
-        //        {
-        //            string columnName = col.ColumnName;
-        //            if (!mainTable.Columns.Contains(columnName))
-        //            {
-        //                mainTable.Columns.Add(columnName, col.DataType);
-        //            }
-        //        }
-        //    }
-
-        //    // העתקת כל השורות מהטבלה החדשה
-        //    foreach (DataRow newRow in newData.Rows)
-        //    {
-        //        var row = mainTable.NewRow();
-        //        foreach (DataColumn col in newData.Columns)
-        //        {
-        //            string columnName = col.ColumnName;
-        //            row[columnName] = newRow[columnName];
-        //        }
-        //        mainTable.Rows.Add(row);
-        //    }
-        //}
-
-        ///// <summary>
-        ///// מציאת שם עמודה חלופי במקרה של התנגשות
-        ///// </summary>
-        //private string FindMatchingColumnName(DataTable table, string baseColumnName)
-        //{
-        //    int suffix = 1;
-        //    string columnName = baseColumnName;
-
-        //    while (table.Columns.Contains(columnName))
-        //    {
-        //        columnName = $"{baseColumnName}_{++suffix}";
-        //    }
-
-        //    return columnName;
-        //}
-
-
+        /// <summary>
         /// המרת תוצאות Dapper לטבלת נתונים
-
+        /// </summary>
         private DataTable ToDataTable(IEnumerable<dynamic> data)
         {
             var dt = new DataTable();
@@ -491,9 +669,9 @@ namespace ReportGenerator.Core.Data
             return dt;
         }
         
-
+        /// <summary>
         /// המרה מ-DbType ל-SqlDbType
-
+        /// </summary>
         private SqlDbType GetSqlDbType(DbType dbType)
         {
             return dbType switch
