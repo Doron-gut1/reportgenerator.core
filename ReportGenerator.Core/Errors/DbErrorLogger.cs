@@ -1,5 +1,6 @@
 using System;
 using System.Data;
+using System.IO;
 using Microsoft.Data.SqlClient;
 
 namespace ReportGenerator.Core.Errors
@@ -10,21 +11,45 @@ namespace ReportGenerator.Core.Errors
     public static class DbErrorLogger
     {
         private static string _connectionString;
+        private static string _logFolder;
+        private static bool _initialized = false;
 
-
+        /// <summary>
         /// אתחול מחלקת הרישום עם מחרוזת התחברות
-
-        public static void Initialize(string connectionString)
+        /// </summary>
+        /// <param name="connectionString">מחרוזת התחברות</param>
+        /// <param name="logFolder">תיקיית לוגים לגיבוי (אופציונלי)</param>
+        public static void Initialize(string connectionString, string logFolder = null)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            
+            if (!string.IsNullOrEmpty(logFolder))
+            {
+                _logFolder = logFolder;
+                if (!Directory.Exists(_logFolder))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(_logFolder);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"שגיאה ביצירת תיקיית לוגים: {ex.Message}");
+                        _logFolder = null;
+                    }
+                }
+            }
+            
+            _initialized = true;
         }
 
-
+        /// <summary>
         /// רישום שגיאה לבסיס הנתונים
-
+        /// </summary>
+        /// <param name="error">אובייקט שגיאה</param>
         public static void LogError(ErrorContext error)
         {
-            if (string.IsNullOrEmpty(_connectionString))
+            if (!_initialized)
             {
                 throw new InvalidOperationException("DbErrorLogger must be initialized with a connection string before use.");
             }
@@ -46,7 +71,7 @@ namespace ReportGenerator.Core.Errors
                             error.ErrorCode;
                             
                         command.Parameters.Add("@errdesc", SqlDbType.NVarChar, 255).Value = 
-                            (error.Description?.Length > 255 ? error.Description.Substring(0, 255) : error.Description);
+                            (error.Description?.Length > 255 ? error.Description.Substring(0, 255) : error.Description) ?? "";
                             
                         command.Parameters.Add("@modulname", SqlDbType.NVarChar, 50).Value = 
                             error.ModuleName ?? "";
@@ -87,8 +112,68 @@ namespace ReportGenerator.Core.Errors
             }
             catch (Exception ex)
             {
-                // כאן צריך לרשום את השגיאה במקום אחר (קובץ לוג, Console וכד')
-                Console.WriteLine($"Error logging to DB: {ex.Message}");
+                // אם נכשל רישום למסד הנתונים, נרשום לקובץ
+                LogToFile(error, ex);
+                
+                // אם זו שגיאה קריטית, הודעה בקונסולה
+                if (error.Severity >= ErrorSeverity.Critical)
+                {
+                    Console.WriteLine($"שגיאה קריטית - לא ניתן לרשום למסד הנתונים: {error.ErrorCode} - {error.Description}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// רישום שגיאה לקובץ טקסט (במקרה שרישום לDB נכשל)
+        /// </summary>
+        /// <param name="error">אובייקט שגיאה</param>
+        /// <param name="loggingException">חריגה שהתרחשה בזמן הניסיון לרשום לDB</param>
+        private static void LogToFile(ErrorContext error, Exception loggingException = null)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_logFolder))
+                {
+                    // אם לא הוגדרה תיקייה, נשתמש בתיקייה זמנית
+                    _logFolder = Path.Combine(Path.GetTempPath(), "ReportGenerator", "Logs");
+                    if (!Directory.Exists(_logFolder))
+                    {
+                        Directory.CreateDirectory(_logFolder);
+                    }
+                }
+                
+                string logFile = Path.Combine(_logFolder, $"ErrorLog_{DateTime.Now:yyyyMMdd}.txt");
+                
+                using (StreamWriter writer = new StreamWriter(logFile, true))
+                {
+                    writer.WriteLine($"--- {DateTime.Now:yyyy-MM-dd HH:mm:ss} ---");
+                    writer.WriteLine($"ErrorCode: {error.ErrorCode}");
+                    writer.WriteLine($"Severity: {error.Severity}");
+                    writer.WriteLine($"Description: {error.Description}");
+                    writer.WriteLine($"Module: {error.ModuleName}, Method: {error.MethodName}, Line: {error.LineNumber}");
+                    writer.WriteLine($"Report: {error.ReportName}, Job: {error.JobNumber}");
+                    writer.WriteLine($"User: {error.User}, Machine: {error.MachineName}");
+                    
+                    if (error.OriginalException != null)
+                    {
+                        writer.WriteLine("Original Exception:");
+                        writer.WriteLine(error.OriginalException.ToString());
+                    }
+                    
+                    if (loggingException != null)
+                    {
+                        writer.WriteLine("Logging Exception (failed to write to DB):");
+                        writer.WriteLine(loggingException.ToString());
+                    }
+                    
+                    writer.WriteLine(new string('-', 80));
+                }
+            }
+            catch (Exception ex)
+            {
+                // במקרה של שגיאה ברישום לקובץ, רישום לקונסולה בלבד
+                Console.WriteLine($"שגיאה קריטית - לא ניתן לרשום למסד הנתונים או לקובץ לוג: {ex.Message}");
+                Console.WriteLine($"פרטי השגיאה המקורית: {error.ErrorCode} - {error.Description}");
             }
         }
     }
