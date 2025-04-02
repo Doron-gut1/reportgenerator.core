@@ -82,6 +82,9 @@ namespace ReportGenerator.Core.Errors
             // שגיאות נתונים
             public const string Data_Format_Invalid = "Excel_Data_Format_Invalid";
             public const string Column_Mapping_Failed = "Excel_Column_Mapping_Failed";
+            
+            // שגיאות עיצוב
+            public const string Style_Invalid = "Excel_Style_Invalid";
         }
         
         // קודי שגיאה של מנהל הדוחות
