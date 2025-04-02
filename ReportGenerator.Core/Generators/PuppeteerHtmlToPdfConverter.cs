@@ -32,12 +32,11 @@ namespace ReportGenerator.Core.Generators
                 PrintBackground = true,
                 MarginOptions = new MarginOptions
                 {
-                    Top = "10mm",
-                    Right = "10mm",
-                    Bottom = "10mm",
-                    Left = "10mm"
-                },
-                PreferCSSPageSize = true
+                    Top = "1cm",
+                    Right = "1cm",
+                    Bottom = "1cm",
+                    Left = "1cm"
+                }
             };
         }
 
@@ -190,7 +189,7 @@ namespace ReportGenerator.Core.Generators
                 html = html.Replace("<title>", $"<title>{title} - ");
             }
 
-            return await ConvertToPdfAsync(html);
+            return await ConvertToPdfAsync(html, _defaultPdfOptions);
         }
 
         /// <summary>
@@ -205,46 +204,32 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
-                // שילוב הכותרות העליונה והתחתונה ב-HTML
-                string fullHtml = html;
-                
-                // הוספת כותרת עליונה אם יש
-                if (!string.IsNullOrEmpty(headerHtml))
+                // יצירת אפשרויות PDF חדשות עם כותרות עליונות ותחתונות
+                var options = new PdfOptions
                 {
-                    fullHtml = fullHtml.Replace("<body>", $"<body><div class=\"page-header\">{headerHtml}</div>");
-                }
-                
-                // הוספת כותרת תחתונה אם יש
-                if (!string.IsNullOrEmpty(footerHtml))
-                {
-                    fullHtml = fullHtml.Replace("</body>", $"<div class=\"page-footer\">{footerHtml}</div></body>");
-                }
-                
-                // הוספת CSS לכותרות החוזרות
-                string cssForHeaderFooter = @"
-                .page-header {
-                    position: running(header);
-                    top: 0;
-                }
-                .page-footer {
-                    position: running(footer);
-                    bottom: 0;
-                }
-                @page {
-                    @top-center { content: element(header) }
-                    @bottom-center { content: element(footer) }
-                }";
-                
-                fullHtml = fullHtml.Replace("</style>", cssForHeaderFooter + "</style>");
-                
+                    Format = PaperFormat.A4,
+                    PrintBackground = true,
+                    HeaderTemplate = headerHtml ?? "<div/>",
+                    FooterTemplate = footerHtml ?? "<div style=\"text-align: center; font-size: 10pt;\">עמוד <span class=\"pageNumber\"></span> מתוך <span class=\"totalPages\"></span></div>",
+                    DisplayHeaderFooter = true,
+                    MarginOptions = new MarginOptions
+                    {
+                        Top = "2cm",
+                        Bottom = "2cm",
+                        Left = "1cm",
+                        Right = "1cm"
+                    }
+                };
+
                 // הוספת כותרת אם יש
                 if (!string.IsNullOrEmpty(title))
                 {
-                    fullHtml = fullHtml.Replace("<title></title>", $"<title>{title}</title>");
-                    fullHtml = fullHtml.Replace("<title>", $"<title>{title} - ");
+                    html = html.Replace("<title></title>", $"<title>{title}</title>");
+                    html = html.Replace("<title>", $"<title>{title} - ");
                 }
-                
-                return await ConvertToPdfAsync(fullHtml);
+
+                // המרה ל-PDF עם כותרות מותאמות
+                return await ConvertToPdfAsync(html, options);
             }
             catch (Exception ex)
             {
@@ -275,14 +260,16 @@ namespace ReportGenerator.Core.Generators
                 
                 if (headerMatch.Success)
                 {
-                    // החזרת התוכן שנמצא
-                    return headerMatch.Groups[1].Success 
+                    // החזרת התוכן שנמצא עם עיצוב
+                    string content = headerMatch.Groups[1].Success 
                         ? headerMatch.Groups[1].Value 
                         : headerMatch.Groups[3].Value;
+                        
+                    return $"<div style='text-align: center; width: 100%; font-family: Arial, sans-serif; direction: rtl;'>{content}</div>";
                 }
                 
                 // אם לא נמצא, מחזיר כותרת ברירת מחדל
-                return "<div style='text-align:center; font-size:10pt;'></div>";
+                return "<div style='text-align: center; font-size: 10pt;'></div>";
             }
             catch (Exception ex)
             {
@@ -291,7 +278,7 @@ namespace ReportGenerator.Core.Generators
                     "שגיאה בחילוץ כותרת עליונה מ-HTML",
                     ex);
                     
-                return "<div style='text-align:center; font-size:10pt;'></div>";
+                return "<div style='text-align: center; font-size: 10pt;'></div>";
             }
         }
 
@@ -311,14 +298,16 @@ namespace ReportGenerator.Core.Generators
                 
                 if (footerMatch.Success)
                 {
-                    // החזרת התוכן שנמצא
-                    return footerMatch.Groups[1].Success 
+                    // החזרת התוכן שנמצא עם עיצוב
+                    string content = footerMatch.Groups[1].Success 
                         ? footerMatch.Groups[1].Value 
                         : footerMatch.Groups[3].Value;
+                    
+                    return $"<div style='text-align: center; width: 100%; font-family: Arial, sans-serif; direction: rtl;'>{content}</div>";
                 }
                 
                 // אם לא נמצא, מחזיר כותרת תחתונה ברירת מחדל עם מספרי עמודים
-                return "<div style='text-align:center; font-size:10pt;'>עמוד <span class='pageNumber'></span> מתוך <span class='totalPages'></span></div>";
+                return "<div style='text-align: center; font-size: 10pt;'>עמוד <span class='pageNumber'></span> מתוך <span class='totalPages'></span></div>";
             }
             catch (Exception ex)
             {
@@ -327,7 +316,7 @@ namespace ReportGenerator.Core.Generators
                     "שגיאה בחילוץ כותרת תחתונה מ-HTML",
                     ex);
                     
-                return "<div style='text-align:center; font-size:10pt;'>עמוד <span class='pageNumber'></span> מתוך <span class='totalPages'></span></div>";
+                return "<div style='text-align: center; font-size: 10pt;'>עמוד <span class='pageNumber'></span> מתוך <span class='totalPages'></span></div>";
             }
         }
     }
