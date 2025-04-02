@@ -1,162 +1,176 @@
 using System;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;
+using ReportGenerator.Core.Errors;
 
 namespace ReportGenerator.Core.Generators
 {
     /// <summary>
-    /// ממיר HTML ל-PDF המבוסס על PuppeteerSharp (Chrome Headless)
+    /// ממיר HTML ל-PDF באמצעות PuppeteerSharp (Chrome Headless)
     /// </summary>
     public class PuppeteerHtmlToPdfConverter : IHtmlToPdfConverter
     {
         private readonly string _chromePath;
-        private readonly bool _downloadChrome;
+        private readonly bool _useHeadless = true;
+        private readonly PdfOptions _defaultPdfOptions;
 
-
-        /// יוצר מופע חדש של ממיר HTML ל-PDF עם PuppeteerSharp
-
-        /// <param name="chromePath">נתיב לקובץ ההפעלה של Chrome (אופציונלי)</param>
-        /// <param name="downloadChrome">האם להוריד את Chrome אם לא קיים (ברירת מחדל: true)</param>
-        public PuppeteerHtmlToPdfConverter(string chromePath = null, bool downloadChrome = true)
+        /// <summary>
+        /// יוצר מופע חדש של ממיר HTML ל-PDF
+        /// </summary>
+        /// <param name="chromePath">נתיב לתוכנת Chrome (אופציונלי)</param>
+        public PuppeteerHtmlToPdfConverter(string chromePath = null)
         {
             _chromePath = chromePath;
-            _downloadChrome = downloadChrome;
-        }
-
-
-        /// ממיר HTML ל-PDF
-
-        /// <param name="html">תוכן HTML</param>
-        /// <param name="title">כותרת המסמך</param>
-        /// <returns>מערך בייטים של PDF</returns>
-        public async Task<byte[]> ConvertToPdf(string html, string title = null)
-        {
-            return await GetPdfContent(html, new PdfOptions
+            
+            // יצירת הגדרות ברירת מחדל עבור PDF
+            _defaultPdfOptions = new PdfOptions
             {
                 Format = PaperFormat.A4,
                 PrintBackground = true,
-                DisplayHeaderFooter = false,
                 MarginOptions = new MarginOptions
                 {
-                    Top = "1cm",
-                    Bottom = "1cm",
-                    Left = "1cm",
-                    Right = "1cm"
-                }
-            });
+                    Top = "10mm",
+                    Right = "10mm",
+                    Bottom = "10mm",
+                    Left = "10mm"
+                },
+                PreferCSSPageSize = true
+            };
         }
 
-
-        /// ממיר HTML ל-PDF עם כותרות מותאמות
-
-        /// <param name="html">תוכן HTML</param>
-        /// <param name="title">כותרת המסמך</param>
-        /// <param name="headerHtml">HTML לכותרת עליונה</param>
-        /// <param name="footerHtml">HTML לכותרת תחתונה</param>
-        /// <returns>מערך בייטים של PDF</returns>
-        public async Task<byte[]> ConvertToPdfWithCustomHeaderFooter(string html, string title, string headerHtml, string footerHtml)
+        /// <summary>
+        /// המרת HTML לקובץ PDF
+        /// </summary>
+        /// <param name="html">תוכן ה-HTML להמרה</param>
+        /// <param name="options">אפשרויות PDF (אופציונלי)</param>
+        /// <returns>מערך בייטים של קובץ ה-PDF</returns>
+        public async Task<byte[]> ConvertToPdfAsync(string html, object options = null)
         {
-            return await GetPdfContent(html, new PdfOptions
+            if (string.IsNullOrEmpty(html))
             {
-                Format = PaperFormat.A4,
-                PrintBackground = true,
-                HeaderTemplate = headerHtml ?? "<div/>",
-                FooterTemplate = footerHtml ?? "<div style=\"text-align: right;width: 297mm;font-size: 15px;\"><span style=\"margin-right: 1cm\">עמוד <span class=\"pageNumber\"></span> מתוך <span class=\"totalPages\"></span></span></div>",
-                DisplayHeaderFooter = true,
-                MarginOptions = new MarginOptions
-                {
-                    Top = "2cm",
-                    Bottom = "2cm",
-                    Left = "1cm",
-                    Right = "1cm"
-                }
-            });
-        }
-
-
-        /// חילוץ חלק הכותרת העליונה מתבנית HTML
-
-        /// <param name="html">תוכן HTML</param>
-        /// <returns>HTML של הכותרת העליונה</returns>
-        public string ExtractHeaderFragment(string html)
-        {
-            var headerMatch = Regex.Match(html, 
-                @"<div\s+class=""page-header""[^>]*>(.*?)</div>", 
-                RegexOptions.Singleline);
-
-            if (headerMatch.Success)
-            {
-                return $"<div style=\"text-align: center; width: 100%; font-family: Arial, sans-serif; direction: rtl;\">{headerMatch.Value}</div>";
+                ErrorManager.LogError(
+                    ErrorCodes.PDF.Html_Conversion_Failed,
+                    ErrorSeverity.Critical,
+                    "תוכן HTML ריק או null נשלח להמרה");
+                throw new ArgumentException("HTML content cannot be null or empty");
             }
 
-            return null;
-        }
-
-
-        /// חילוץ חלק הכותרת התחתונה מתבנית HTML
-
-        /// <param name="html">תוכן HTML</param>
-        /// <returns>HTML של הכותרת התחתונה</returns>
-        public string ExtractFooterFragment(string html)
-        {
-            var footerMatch = Regex.Match(html, 
-                @"<div\s+class=""page-footer""[^>]*>(.*?)</div>", 
-                RegexOptions.Singleline);
-
-            if (footerMatch.Success)
-            {
-                return $"<div style=\"text-align: center; width: 100%; font-family: Arial, sans-serif; direction: rtl;\">{footerMatch.Value}</div>";
-            }
-
-            return null;
-        }
-
-
-        /// יוצר PDF מתוכן HTML באמצעות Puppeteer
-
-        private async Task<byte[]> GetPdfContent(string htmlString, PdfOptions options)
-        {
             try
             {
-                //if (_downloadChrome)
-                //{
-                //    await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
-                //}
-
-                await using (var browser = await Puppeteer.LaunchAsync(new LaunchOptions
+                var browserOptions = new LaunchOptions
                 {
-                    Headless = true,
-                    ExecutablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-                    //ExecutablePath = !string.IsNullOrEmpty(_chromePath) ? _chromePath : null
-                }))
+                    Headless = _useHeadless
+                };
+                
+                // אם נקבע נתיב ידני ל-Chrome, משתמשים בו
+                if (!string.IsNullOrEmpty(_chromePath))
                 {
-                    await using (var page = await browser.NewPageAsync())
-                    {
-                        await page.EmulateMediaTypeAsync(MediaType.Print);
-                        await page.SetContentAsync(htmlString);
-                        
-                        var stream = await page.PdfStreamAsync(options);
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            byte[] buffer = new byte[16384];
-                            int count;
-                            
-                            while ((count = stream.Read(buffer, 0, buffer.Length)) > 0)
-                            {
-                                memoryStream.Write(buffer, 0, count);
-                            }
-                            
-                            return memoryStream.ToArray();
-                        }
-                    }
+                    browserOptions.ExecutablePath = _chromePath;
                 }
+                // אחרת מורידים את הגרסה הנדרשת אוטומטית
+                else
+                {
+                    var browserFetcher = new BrowserFetcher();
+                    await browserFetcher.DownloadAsync();
+                    
+                    ErrorManager.LogInfo(
+                        "Chrome_Downloaded",
+                        "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
+                }
+                
+                // פתיחת דפדפן חדש
+                using var browser = await Puppeteer.LaunchAsync(browserOptions);
+                using var page = await browser.NewPageAsync();
+                
+                // הגדרת encoding ושפה
+                await page.SetContentAsync(html, new NavigationOptions
+                {
+                    WaitUntil = new[] { WaitUntilNavigation.NetworkIdle0 }
+                });
+                
+                // המרה ל-PDF עם הגדרות מותאמות או ברירת מחדל
+                var pdfOptions = options as PdfOptions ?? _defaultPdfOptions;
+                var pdfBytes = await page.PdfDataAsync(pdfOptions);
+                
+                // תיעוד הצלחה
+                ErrorManager.LogInfo(
+                    "PDF_Conversion_Success",
+                    $"המרת HTML ל-PDF הושלמה בהצלחה. גודל: {pdfBytes.Length / 1024:N0} KB");
+                
+                return pdfBytes;
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                // שגיאת גישה לקובץ Chrome
+                ErrorManager.LogError(
+                    ErrorCodes.PDF.Chrome_Not_Found,
+                    ErrorSeverity.Critical,
+                    "שגיאה בהפעלת Chrome. וודא שהתוכנה מותקנת או שהנתיב תקין",
+                    ex);
+                throw new Exception("Failed to start Chrome browser. Make sure Chrome is installed or path is correct", ex);
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error generating PDF with PuppeteerSharp: {ex.Message}", ex);
+                ErrorManager.LogError(
+                    ErrorCodes.PDF.Html_Conversion_Failed,
+                    ErrorSeverity.Critical,
+                    "שגיאה בהמרת HTML ל-PDF",
+                    ex);
+                throw new Exception("Error converting HTML to PDF", ex);
+            }
+        }
+
+        /// <summary>
+        /// המרת HTML מקובץ לקובץ PDF
+        /// </summary>
+        /// <param name="htmlFilePath">נתיב לקובץ HTML</param>
+        /// <param name="pdfFilePath">נתיב לקובץ PDF פלט</param>
+        /// <returns>מערך בייטים של קובץ ה-PDF</returns>
+        public async Task<byte[]> ConvertFileToPdfAsync(string htmlFilePath, string pdfFilePath = null)
+        {
+            try
+            {
+                if (!File.Exists(htmlFilePath))
+                {
+                    ErrorManager.LogError(
+                        ErrorCodes.PDF.Html_Conversion_Failed,
+                        ErrorSeverity.Critical,
+                        $"קובץ HTML לא קיים: {htmlFilePath}");
+                    throw new FileNotFoundException($"HTML file not found: {htmlFilePath}");
+                }
+                
+                // קריאת תוכן הקובץ
+                string htmlContent = await File.ReadAllTextAsync(htmlFilePath);
+                
+                // המרה ל-PDF
+                byte[] pdfBytes = await ConvertToPdfAsync(htmlContent);
+                
+                // שמירה לקובץ אם נדרש
+                if (!string.IsNullOrEmpty(pdfFilePath))
+                {
+                    await File.WriteAllBytesAsync(pdfFilePath, pdfBytes);
+                    ErrorManager.LogInfo(
+                        "PDF_File_Saved", 
+                        $"קובץ PDF נשמר: {pdfFilePath}");
+                }
+                
+                return pdfBytes;
+            }
+            catch (FileNotFoundException ex)
+            {
+                // כבר טופל למעלה
+                throw;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogError(
+                    ErrorCodes.PDF.Html_Conversion_Failed,
+                    ErrorSeverity.Critical,
+                    $"שגיאה בהמרת קובץ HTML ל-PDF: {htmlFilePath}",
+                    ex);
+                throw new Exception($"Error converting HTML file to PDF: {htmlFilePath}", ex);
             }
         }
     }
