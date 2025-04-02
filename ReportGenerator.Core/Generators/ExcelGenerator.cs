@@ -13,18 +13,18 @@ namespace ReportGenerator.Core.Generators
         private readonly Dictionary<string, string> _columnMappings;
         private readonly List<string> _hiddenColumns = new List<string> { "IsSummary" };
 
-        /// <summary>
+
         /// יוצר מופע חדש של יוצר קבצי אקסל
-        /// </summary>
+
         /// <param name="columnMappings">מילון מיפויים בין שמות עמודות באנגלית לעברית</param>
         public ExcelGenerator(Dictionary<string, string> columnMappings = null)
         {
             _columnMappings = columnMappings ?? new Dictionary<string, string>();
         }
 
-        /// <summary>
+
         /// יוצר קובץ אקסל מטבלת נתונים
-        /// </summary>
+
         /// <param name="data">טבלת נתונים מקורית</param>
         /// <returns>מערך בייטים של קובץ אקסל</returns>
         public byte[] Generate(DataTable data)
@@ -80,9 +80,9 @@ namespace ReportGenerator.Core.Generators
             }
         }
 
-        /// <summary>
+
         /// יוצר קובץ אקסל ממספר טבלאות נתונים
-        /// </summary>
+
         /// <param name="dataTables">מילון טבלאות נתונים</param>
         /// <param name="reportTitle">כותרת הדוח</param>
         /// <returns>מערך בייטים של קובץ אקסל</returns>
@@ -244,9 +244,9 @@ namespace ReportGenerator.Core.Generators
             rowRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(240, 248, 255));
         }
 
-        /// <summary>
+
         /// מקבל את השם העברי של עמודה מתוך מילון המיפויים
-        /// </summary>
+
         /// <param name="columnName">שם העמודה באנגלית</param>
         /// <returns>שם עברי מהמיפוי, או שם העמודה המקורי אם אין מיפוי</returns>
         private string GetHebrewColumnName(string columnName)

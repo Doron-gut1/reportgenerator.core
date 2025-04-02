@@ -22,9 +22,9 @@ namespace ReportGenerator.Core.Errors
         // תיעוד השגיאה האחרונה
         public static ErrorContext LastError { get; private set; }
         
-        /// <summary>
+
         /// טיפול בשגיאה וקבלת החלטה אם להמשיך
-        /// </summary>
+
         /// <param name="error">אובייקט שגיאה</param>
         /// <returns>האם ניתן להמשיך בתהליך</returns>
         public static bool HandleError(ErrorContext error)
@@ -45,26 +45,23 @@ namespace ReportGenerator.Core.Errors
                 DbErrorLogger.LogError(error);
                 _loggedErrorCodes.Add(errorSignature);
                 error.IsLogged = true;
-            }
-            
+            }           
             // החלטה אם להמשיך את התהליך
             bool canContinue = error.Severity < BreakThreshold;
             
             return canContinue;
         }
         
-        /// <summary>
         /// ניקוי רשימת השגיאות (בין הפקות דוחות)
-        /// </summary>
         public static void ClearErrors()
         {
             _loggedErrorCodes.Clear();
             LastError = null;
         }
         
-        /// <summary>
+
         /// יצירת שגיאה ושליחתה לטיפול
-        /// </summary>
+
         /// <param name="errorCode">קוד שגיאה</param>
         /// <param name="severity">רמת חומרה</param>
         /// <param name="description">תיאור השגיאה</param>
@@ -94,9 +91,7 @@ namespace ReportGenerator.Core.Errors
             return HandleError(error);
         }
         
-        /// <summary>
         /// רישום שגיאה מסוג מידע
-        /// </summary>
         public static bool LogInfo(
             string errorCode,
             string description,
@@ -108,10 +103,8 @@ namespace ReportGenerator.Core.Errors
         {
             return LogError(errorCode, ErrorSeverity.Information, description, ex, reportName, methodName, filePath, lineNumber);
         }
-
-        /// <summary>
         /// רישום שגיאה מסוג אזהרה
-        /// </summary>
+
         public static bool LogWarning(
             string errorCode,
             string description,
@@ -124,9 +117,9 @@ namespace ReportGenerator.Core.Errors
             return LogError(errorCode, ErrorSeverity.Warning, description, ex, reportName, methodName, filePath, lineNumber);
         }
 
-        /// <summary>
+
         /// רישום שגיאה רגילה
-        /// </summary>
+
         public static bool LogNormalError(
             string errorCode,
             string description,
@@ -139,9 +132,9 @@ namespace ReportGenerator.Core.Errors
             return LogError(errorCode, ErrorSeverity.Error, description, ex, reportName, methodName, filePath, lineNumber);
         }
 
-        /// <summary>
+
         /// רישום שגיאה קריטית
-        /// </summary>
+
         public static bool LogCriticalError(
             string errorCode,
             string description,

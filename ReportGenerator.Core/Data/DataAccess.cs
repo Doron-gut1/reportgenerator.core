@@ -14,9 +14,9 @@ namespace ReportGenerator.Core.Data
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        /// <summary>
+
         /// מקבל את שמות הפרוצדורות לשליפת נתונים עבור דוח
-        /// </summary>
+
         /// <param name="reportName">שם הדוח</param>
         /// <returns>מחרוזת עם שמות הפרוצדורות (מופרדות בפסיק נקודה)</returns>
         public async Task<string> GetStoredProcName(string reportName)
@@ -35,6 +35,14 @@ namespace ReportGenerator.Core.Data
             using var connection = new SqlConnection(_connectionString);
             return await connection.QuerySingleOrDefaultAsync<string>(
                 "SELECT dbo.mntname(@Mnt)",
+                new { Mnt = mnt });
+        }
+
+        public async Task<string> GetPeriodName(int mnt)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QuerySingleOrDefaultAsync<string>(
+                "SELECT dbo.PeriodName(@Mnt)",
                 new { Mnt = mnt });
         }
 
@@ -67,9 +75,9 @@ namespace ReportGenerator.Core.Data
             }
         }
 
-        /// <summary>
+
         /// מאפשר שליפת שמות מרובים לקודים (למקרה של רשימות)
-        /// </summary>
+
         /// <param name="codes">רשימת קודים מופרדים בפסיקים</param>
         /// <param name="tableName">שם הטבלה לשליפה</param>
         /// <param name="codeField">שם שדה הקוד</param>
@@ -134,9 +142,9 @@ namespace ReportGenerator.Core.Data
             return result ?? throw new Exception($"Report Name {reportName} not found");
         }
 
-        /// <summary>
+
         /// בודק אם אובייקט SQL הוא פונקציה טבלאית
-        /// </summary>
+
         /// <param name="objectName">שם האובייקט ב-SQL</param>
         /// <returns>האם האובייקט הוא פונקציה טבלאית</returns>
         public async Task<bool> IsTableFunction(string objectName)
@@ -151,9 +159,9 @@ namespace ReportGenerator.Core.Data
             return count > 0;
         }
 
-        /// <summary>
+
         /// מקבל מיפויים של שמות עמודות לכותרות בעברית
-        /// </summary>
+
         /// <param name="procNames">שמות הפרוצדורות/פונקציות</param>
         /// <returns>מילון עם המיפויים מאנגלית לעברית</returns>
         public async Task<Dictionary<string, string>> GetColumnMappings(string procNames)
@@ -195,9 +203,9 @@ namespace ReportGenerator.Core.Data
             return mappings;
         }
 
-        /// <summary>
+
         /// הרצת מספר פרוצדורות או פונקציות טבלאיות ומיזוג התוצאות
-        /// </summary>
+
         /// <param name="objectNames">שמות הפרוצדורות/פונקציות (מופרדות בפסיק נקודה)</param>
         /// <param name="parameters">פרמטרים להעברה לפרוצדורות</param>
         /// <returns>מילון המכיל DataTable לכל פרוצדורה/פונקציה</returns>
@@ -242,9 +250,9 @@ namespace ReportGenerator.Core.Data
             return result;
         }
 
-        /// <summary>
+
         /// הרצת פונקציה טבלאית
-        /// </summary>
+
         /// <param name="functionName">שם הפונקציה</param>
         /// <param name="parameters">פרמטרים</param>
         /// <returns>טבלת נתונים עם התוצאות</returns>
@@ -296,9 +304,9 @@ namespace ReportGenerator.Core.Data
             return dataTable;
         }
 
-        /// <summary>
+
         /// הרצת פרוצדורה מאוחסנת וקבלת התוצאות כטבלה
-        /// </summary>
+
         /// <param name="spName">שם הפרוצדורה</param>
         /// <param name="parameters">פרמטרים</param>
         /// <returns>טבלת נתונים עם התוצאות</returns>
@@ -397,9 +405,9 @@ namespace ReportGenerator.Core.Data
     return result;
 }
 
-        /// <summary>
+
         /// מיזוג טבלאות נתונים
-        /// </summary>
+
         //private void MergeDataTables(DataTable mainTable, DataTable newData)
         //{
         //    // אם הטבלה הראשית ריקה, נוסיף את כל העמודות
@@ -452,9 +460,9 @@ namespace ReportGenerator.Core.Data
         //    return columnName;
         //}
 
-        /// <summary>
+
         /// המרת תוצאות Dapper לטבלת נתונים
-        /// </summary>
+
         private DataTable ToDataTable(IEnumerable<dynamic> data)
         {
             var dt = new DataTable();
@@ -483,9 +491,9 @@ namespace ReportGenerator.Core.Data
             return dt;
         }
         
-        /// <summary>
+
         /// המרה מ-DbType ל-SqlDbType
-        /// </summary>
+
         private SqlDbType GetSqlDbType(DbType dbType)
         {
             return dbType switch

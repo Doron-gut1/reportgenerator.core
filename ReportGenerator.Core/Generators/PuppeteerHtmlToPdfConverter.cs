@@ -15,9 +15,9 @@ namespace ReportGenerator.Core.Generators
         private readonly string _chromePath;
         private readonly bool _downloadChrome;
 
-        /// <summary>
+
         /// יוצר מופע חדש של ממיר HTML ל-PDF עם PuppeteerSharp
-        /// </summary>
+
         /// <param name="chromePath">נתיב לקובץ ההפעלה של Chrome (אופציונלי)</param>
         /// <param name="downloadChrome">האם להוריד את Chrome אם לא קיים (ברירת מחדל: true)</param>
         public PuppeteerHtmlToPdfConverter(string chromePath = null, bool downloadChrome = true)
@@ -26,9 +26,9 @@ namespace ReportGenerator.Core.Generators
             _downloadChrome = downloadChrome;
         }
 
-        /// <summary>
+
         /// ממיר HTML ל-PDF
-        /// </summary>
+
         /// <param name="html">תוכן HTML</param>
         /// <param name="title">כותרת המסמך</param>
         /// <returns>מערך בייטים של PDF</returns>
@@ -49,9 +49,9 @@ namespace ReportGenerator.Core.Generators
             });
         }
 
-        /// <summary>
+
         /// ממיר HTML ל-PDF עם כותרות מותאמות
-        /// </summary>
+
         /// <param name="html">תוכן HTML</param>
         /// <param name="title">כותרת המסמך</param>
         /// <param name="headerHtml">HTML לכותרת עליונה</param>
@@ -76,9 +76,9 @@ namespace ReportGenerator.Core.Generators
             });
         }
 
-        /// <summary>
+
         /// חילוץ חלק הכותרת העליונה מתבנית HTML
-        /// </summary>
+
         /// <param name="html">תוכן HTML</param>
         /// <returns>HTML של הכותרת העליונה</returns>
         public string ExtractHeaderFragment(string html)
@@ -95,9 +95,9 @@ namespace ReportGenerator.Core.Generators
             return null;
         }
 
-        /// <summary>
+
         /// חילוץ חלק הכותרת התחתונה מתבנית HTML
-        /// </summary>
+
         /// <param name="html">תוכן HTML</param>
         /// <returns>HTML של הכותרת התחתונה</returns>
         public string ExtractFooterFragment(string html)
@@ -114,9 +114,9 @@ namespace ReportGenerator.Core.Generators
             return null;
         }
 
-        /// <summary>
+
         /// יוצר PDF מתוכן HTML באמצעות Puppeteer
-        /// </summary>
+
         private async Task<byte[]> GetPdfContent(string htmlString, PdfOptions options)
         {
             try

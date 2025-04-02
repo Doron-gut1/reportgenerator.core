@@ -20,9 +20,9 @@ namespace ReportGenerator.Core.Management
         private readonly HtmlBasedPdfGenerator _htmlPdfGenerator;
         private ExcelGenerator _excelGenerator;
 
-        /// <summary>
+
         /// יוצר מופע חדש של מנהל הדוחות
-        /// </summary>
+
         /// <param name="connectionString">מחרוזת התחברות לבסיס הנתונים</param>
         /// <param name="templatesFolder">נתיב לתיקיית תבניות HTML</param>
         /// <param name="chromePath">נתיב לקובץ ההפעלה של Chrome (אופציונלי)</param>
@@ -46,9 +46,9 @@ namespace ReportGenerator.Core.Management
             _excelGenerator = new ExcelGenerator();
         }
 
-        /// <summary>
+
         /// מייצר דוח לפי שם, פורמט ופרמטרים
-        /// </summary>
+
         /// <param name="reportName">שם הדוח</param>
         /// <param name="format">פורמט הפלט (PDF/Excel)</param>
         /// <param name="parameters">פרמטרים לדוח</param>
@@ -101,9 +101,9 @@ namespace ReportGenerator.Core.Management
             }
         }
 
-        /// <summary>
+
         /// המרת מערך פרמטרים לפורמט המובן למערכת
-        /// </summary>
+
         private Dictionary<string, ParamValue> ParseParameters(object[] paramArray)
         {
             var result = new Dictionary<string, ParamValue>(StringComparer.OrdinalIgnoreCase);
@@ -132,9 +132,9 @@ namespace ReportGenerator.Core.Management
             }
         }
 
-        /// <summary>
+
         /// מטפל בפרמטרים מיוחדים ומחשב פרמטרים נגזרים כגון שמות
-        /// </summary>
+
         /// <param name="parameters">מילון הפרמטרים המקורי</param>
         /// <returns>מילון מעודכן עם פרמטרים נוספים</returns>
         private async Task<Dictionary<string, ParamValue>> ProcessSpecialParameters(Dictionary<string, ParamValue> parameters)
@@ -149,10 +149,14 @@ namespace ReportGenerator.Core.Management
                 {
                     int mntValue = Convert.ToInt32(mntParam.Value);
                     string monthName = await _dataAccess.GetMonthName(mntValue);
-
+                    string PeriodName = await _dataAccess.GetPeriodName(mntValue);
                     if (!enhancedParams.ContainsKey("mntname"))
                     {
                         enhancedParams.Add("mntname", new ParamValue(monthName, DbType.String));
+                    }
+                    if (!enhancedParams.ContainsKey("PeriodName"))
+                    {
+                        enhancedParams.Add("PeriodName", new ParamValue(monthName, DbType.String));
                     }
                 }
 

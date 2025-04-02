@@ -17,9 +17,9 @@ namespace ReportGenerator.Core.Generators
         private readonly Dictionary<string, string> _columnMappings;
         private readonly IHandlebars _handlebars;
 
-        /// <summary>
+
         /// יוצר מופע חדש של מעבד תבניות
-        /// </summary>
+
         /// <param name="columnMappings">מילון המיפויים בין שמות עמודות באנגלית לעברית</param>
         public HtmlTemplateProcessor(Dictionary<string, string> columnMappings)
         {
@@ -37,9 +37,9 @@ namespace ReportGenerator.Core.Generators
             });
         }
 
-        /// <summary>
+
         /// מעבד תבנית HTML והחלפת כל הפלייסהולדרים בערכים
-        /// </summary>
+
         /// <param name="template">תבנית HTML</param>
         /// <param name="values">מילון ערכים לפלייסהולדרים פשוטים</param>
         /// <param name="dataTables">טבלאות נתונים לפלייסהולדרים מורכבים</param>
@@ -83,9 +83,9 @@ namespace ReportGenerator.Core.Generators
             return result;
         }
 
-        /// <summary>
+
         /// מחפש שורת סיכום לפי שדה hesder = -1
-        /// </summary>
+
         private DataRow FindSummaryRow(DataTable table)
         {
             if (table.Columns.Contains("hesder"))
@@ -105,9 +105,9 @@ namespace ReportGenerator.Core.Generators
             return null;
         }
 
-        /// <summary>
+
         /// מקבל את טבלת ברירת המחדל לעיבוד תנאים גלובליים
-        /// </summary>
+
         private DataTable GetDefaultDataTable(Dictionary<string, DataTable> dataTables)
         {
             // נסה למצוא את טבלת הנתונים של השלב החשוב ביותר
@@ -150,9 +150,9 @@ namespace ReportGenerator.Core.Generators
             return template;
         }
 
-        /// <summary>
+
         /// מעבד תנאים בתחביר Handlebars בשורות של טבלאות
-        /// </summary>
+
         private string ProcessHandlebarsConditions(string html, DataRow row)
         {
             try
@@ -203,9 +203,9 @@ namespace ReportGenerator.Core.Generators
             }
         }
 
-        /// <summary>
+
         /// מעבד תנאים גלובליים (לא בתוך טבלאות דינמיות)
-        /// </summary>
+
         private string ProcessGlobalConditions(string html, DataRow dataRow)
         {
             try
@@ -232,9 +232,9 @@ namespace ReportGenerator.Core.Generators
             }
         }
 
-        /// <summary>
+
         /// מעבד תנאים בקטע מסוים של ה-HTML
-        /// </summary>
+
         private string ProcessConditionsInSection(string html, string startTag, string endTag, DataRow dataRow)
         {
             int startIndex = 0;
@@ -273,10 +273,10 @@ namespace ReportGenerator.Core.Generators
             return html;
         }
 
-        /// <summary>
+
         /// מקבל את השם העברי של עמודה לפי שם העמודה באנגלית
         /// מפעיל לוגיקת זיהוי ופיצול של שמות שדות
-        /// </summary>
+
         /// <param name="columnName">שם העמודה באנגלית</param>
         /// <param name="procName">שם הפרוצדורה (אופציונלי)</param>
         /// <returns>הכותרת בעברית של העמודה</returns>
@@ -307,9 +307,9 @@ namespace ReportGenerator.Core.Generators
             return columnName;
         }
 
-        /// <summary>
+
         /// מחליף פלייסהולדרים של כותרות (HEADER:) בערכים עבריים מהמיפוי
-        /// </summary>
+
         private string ProcessHeaders(string template)
         {
             var headerMatches = Regex.Matches(template, @"\{\{HEADER:([^}]+)\}\}");
@@ -325,9 +325,9 @@ namespace ReportGenerator.Core.Generators
             return template;
         }
 
-        /// <summary>
+
         /// מעבד טבלאות דינמיות בתבנית - מחליף שורה אחת במספר שורות לפי הנתונים
-        /// </summary>
+
         private string ProcessDynamicTables(string template, Dictionary<string, DataTable> dataTables)
         {
             if (dataTables == null || dataTables.Count == 0)
@@ -393,9 +393,9 @@ namespace ReportGenerator.Core.Generators
             return template;
         }
 
-        /// <summary>
+
         /// פורמט ערכים לתצוגה
-        /// </summary>
+
         private string FormatValue(object value)
         {
             if (value == null || value == DBNull.Value)
@@ -474,9 +474,9 @@ namespace ReportGenerator.Core.Generators
             return value.ToString();
         }
 
-        /// <summary>
+
         /// מחפש מפתח מתאים במילון הנתונים, עם התחשבות בקידומת dbo.
-        /// </summary>
+
         private string FindMatchingTableKey(Dictionary<string, DataTable> dataTables, string requestedName)
         {
             // בדיקה ישירה

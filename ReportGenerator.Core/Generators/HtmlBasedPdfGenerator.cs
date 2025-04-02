@@ -15,9 +15,9 @@ namespace ReportGenerator.Core.Generators
         private readonly HtmlTemplateProcessor _templateProcessor;
         private readonly IHtmlToPdfConverter _pdfConverter;
 
-        /// <summary>
+
         /// יוצר מופע חדש של יוצר PDF מבוסס HTML
-        /// </summary>
+
         /// <param name="templateManager">מנהל תבניות</param>
         /// <param name="templateProcessor">מעבד תבניות</param>
         /// <param name="pdfConverter">ממיר HTML ל-PDF</param>
@@ -31,9 +31,9 @@ namespace ReportGenerator.Core.Generators
             _pdfConverter = pdfConverter ?? throw new ArgumentNullException(nameof(pdfConverter));
         }
 
-        /// <summary>
+
         /// מייצר PDF מתבנית HTML
-        /// </summary>
+
         /// <param name="templateName">שם התבנית</param>
         /// <param name="reportTitle">כותרת הדוח</param>
         /// <param name="dataTables">טבלאות נתונים</param>

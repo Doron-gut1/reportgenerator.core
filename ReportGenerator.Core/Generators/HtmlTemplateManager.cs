@@ -14,9 +14,9 @@ namespace ReportGenerator.Core.Generators
     {
         private readonly string _templatesFolder;
 
-        /// <summary>
+
         /// יוצר מופע חדש של מנהל התבניות
-        /// </summary>
+
         /// <param name="templatesFolder">נתיב לתיקיית התבניות</param>
         public HtmlTemplateManager(string templatesFolder)
         {
@@ -30,9 +30,9 @@ namespace ReportGenerator.Core.Generators
                 Directory.CreateDirectory(_templatesFolder);
         }
 
-        /// <summary>
+
         /// בודק אם תבנית קיימת
-        /// </summary>
+
         /// <param name="templateName">שם התבנית (ללא סיומת)</param>
         /// <returns>האם התבנית קיימת</returns>
         public bool TemplateExists(string templateName)
@@ -41,9 +41,9 @@ namespace ReportGenerator.Core.Generators
             return File.Exists(fullPath);
         }
 
-        /// <summary>
+
         /// מקבל רשימה של כל התבניות הזמינות
-        /// </summary>
+
         /// <returns>רשימת שמות תבניות (ללא סיומת)</returns>
         public IEnumerable<string> GetAvailableTemplates()
         {
@@ -51,9 +51,9 @@ namespace ReportGenerator.Core.Generators
                 .Select(file => Path.GetFileNameWithoutExtension(file));
         }
 
-        /// <summary>
+
         /// טוען תבנית HTML מהדיסק
-        /// </summary>
+
         /// <param name="templateName">שם התבנית (ללא סיומת)</param>
         /// <returns>תוכן התבנית כמחרוזת</returns>
         public async Task<string> GetTemplateAsync(string templateName)
@@ -66,9 +66,9 @@ namespace ReportGenerator.Core.Generators
             return await File.ReadAllTextAsync(fullPath);
         }
 
-        /// <summary>
+
         /// שומר תבנית HTML לדיסק
-        /// </summary>
+
         /// <param name="templateName">שם התבנית (ללא סיומת)</param>
         /// <param name="content">תוכן התבנית</param>
         public async Task SaveTemplateAsync(string templateName, string content)
@@ -77,9 +77,9 @@ namespace ReportGenerator.Core.Generators
             await File.WriteAllTextAsync(fullPath, content);
         }
 
-        /// <summary>
+
         /// מקבל את הנתיב המלא לקובץ התבנית
-        /// </summary>
+
         /// <param name="templateName">שם התבנית (ללא סיומת)</param>
         /// <returns>נתיב מלא לקובץ</returns>
         private string GetTemplatePath(string templateName)

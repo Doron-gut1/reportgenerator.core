@@ -11,17 +11,17 @@ namespace ReportGenerator.Core.Errors
     {
         private static string _connectionString;
 
-        /// <summary>
+
         /// אתחול מחלקת הרישום עם מחרוזת התחברות
-        /// </summary>
+
         public static void Initialize(string connectionString)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        /// <summary>
+
         /// רישום שגיאה לבסיס הנתונים
-        /// </summary>
+
         public static void LogError(ErrorContext error)
         {
             if (string.IsNullOrEmpty(_connectionString))
