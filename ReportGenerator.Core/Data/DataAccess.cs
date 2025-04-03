@@ -123,6 +123,33 @@ namespace ReportGenerator.Core.Data
                 return $"תקופה {mnt}";
             }
         }
+        public async Task<string> GetMoazaName()
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                var result = await connection.QuerySingleOrDefaultAsync<string>(
+                    "SELECT dbo.GetMoazaName()");
+
+                if (result == null)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.DB.MoazaName_NotFound,
+                        "לא נמצא שם מועצה");
+                    return "מועצה לא ידועה";
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogNormalError(
+                    ErrorCodes.DB.Query_Failed,
+                    "שגיאה בשליפת שם מועצה",
+                    ex);
+                return "מועצה לא ידועה";
+            }
+        }
 
         /// <summary>
         /// מקבל את שם סוג החיוב לפי קוד
@@ -165,7 +192,7 @@ namespace ReportGenerator.Core.Data
             {
                 using var connection = new SqlConnection(_connectionString);
                 var result = await connection.QuerySingleOrDefaultAsync<string>(
-                    "SELECT name FROM ishuv WHERE isvkod = @Isvkod",
+                    "SELECT dbo.GetCityName(@Isvkod)",
                     new { Isvkod = isvkod });
 
                 if (result == null)

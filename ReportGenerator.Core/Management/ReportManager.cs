@@ -163,7 +163,7 @@ namespace ReportGenerator.Core.Management
         private Dictionary<string, ParamValue> ParseParameters(object[] paramArray)
         {
             var result = new Dictionary<string, ParamValue>(StringComparer.OrdinalIgnoreCase);
-            
+
             try
             {
                 if (paramArray == null || paramArray.Length == 0)
@@ -173,7 +173,7 @@ namespace ReportGenerator.Core.Management
                         "לא הועברו פרמטרים להפקת הדוח");
                     return result;
                 }
-                
+
                 for (int i = 0; i < paramArray.Length; i += 3)
                 {
                     if (i + 2 >= paramArray.Length)
@@ -182,10 +182,11 @@ namespace ReportGenerator.Core.Management
                             ErrorCodes.Report.Parameters_Invalid,
                             ErrorSeverity.Error,
                             "מערך הפרמטרים אינו בפורמט הנכון");
-                            
+
                         throw new ArgumentException("Parameter array is not in the correct format");
                     }
 
+                    // בדיקת שם פרמטר
                     string paramName = paramArray[i]?.ToString();
                     if (string.IsNullOrEmpty(paramName))
                     {
@@ -193,27 +194,46 @@ namespace ReportGenerator.Core.Management
                             ErrorCodes.Report.Parameters_Invalid,
                             ErrorSeverity.Error,
                             $"שם פרמטר במיקום {i} הוא null או ריק");
-                            
+
                         throw new ArgumentException($"Parameter name at position {i} is null or empty");
                     }
 
+                    // הערך יכול להיות null - זה תקין
                     object paramValue = paramArray[i + 1];
-                    
-                    if (!(paramArray[i + 2] is int dbTypeValue))
-                    {
-                        ErrorManager.LogError(
-                            ErrorCodes.Report.Parameters_Type_Mismatch,
-                            ErrorSeverity.Error,
-                            $"סוג הפרמטר במיקום {i + 2} אינו DbType");
-                            
-                        throw new ArgumentException($"Parameter type at position {i + 2} is not a valid DbType");
-                    }
-                    
-                    DbType paramType = (DbType)dbTypeValue;
 
+                    // בדיקת סוג הפרמטר - יכול להיות enum של DbType או int
+                    DbType paramType;
+                    object dbTypeObject = paramArray[i + 2];
+
+                    if (dbTypeObject is DbType dbTypeEnum)
+                    {
+                        // אם זה כבר DbType, השתמש בו ישירות
+                        paramType = dbTypeEnum;
+                    }
+                    else
+                    {
+                        // אחרת, נסה להמיר למספר ואז ל-DbType
+                        try
+                        {
+                            int dbTypeValue = Convert.ToInt32(dbTypeObject);
+                            paramType = (DbType)dbTypeValue;
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorManager.LogError(
+                                ErrorCodes.Report.Parameters_Type_Mismatch,
+                                ErrorSeverity.Error,
+                                $"סוג הפרמטר במיקום {i + 2} אינו DbType תקין: {dbTypeObject}",
+                                ex);
+
+                            throw new ArgumentException($"Parameter type at position {i + 2} is not a valid DbType: {dbTypeObject}", ex);
+                        }
+                    }
+
+                    // הוספת הפרמטר למילון התוצאה
                     result.Add(paramName, new ParamValue(paramValue, paramType));
                 }
-                
+
                 return result;
             }
             catch (Exception ex) when (!(ex is ArgumentException))
@@ -223,7 +243,7 @@ namespace ReportGenerator.Core.Management
                     ErrorSeverity.Error,
                     "שגיאה בניתוח מערך הפרמטרים",
                     ex);
-                    
+
                 throw new ArgumentException("Error parsing parameters array", ex);
             }
         }
@@ -235,163 +255,177 @@ namespace ReportGenerator.Core.Management
         /// <returns>מילון מעודכן עם פרמטרים נוספים</returns>
         private async Task<Dictionary<string, ParamValue>> ProcessSpecialParameters(Dictionary<string, ParamValue> parameters)
         {
-            // יצירת עותק של מילון הפרמטרים כדי לא לשנות את המקורי
             var enhancedParams = new Dictionary<string, ParamValue>(parameters, StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                // טיפול בפרמטר חודש (mnt) - הוספת שם החודש
-                if (enhancedParams.TryGetValue("mnt", out ParamValue mntParam) && mntParam.Value != null)
-                {
-                    try
-                    {
-                        int mntValue = Convert.ToInt32(mntParam.Value);
-                        string monthName = await _dataAccess.GetMonthName(mntValue);
-                        string PeriodName = await _dataAccess.GetPeriodName(mntValue);
-                        
-                        if (!enhancedParams.ContainsKey("mntname"))
-                        {
-                            enhancedParams.Add("mntname", new ParamValue(monthName, DbType.String));
-                        }
-                        
-                        if (!enhancedParams.ContainsKey("PeriodName"))
-                        {
-                            enhancedParams.Add("PeriodName", new ParamValue(monthName, DbType.String));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorManager.LogWarning(
-                            ErrorCodes.Report.Parameters_Invalid,
-                            $"שגיאה בעיבוד פרמטר חודש (mnt): {ex.Message}");
-                    }
-                }
-
-                // טיפול בפרמטר סוג חיוב (sugts) - הוספת שם סוג החיוב
-                if (enhancedParams.TryGetValue("sugts", out ParamValue sugtsParam) && sugtsParam.Value != null)
-                {
-                    try
-                    {
-                        int sugtsValue = Convert.ToInt32(sugtsParam.Value);
-                        string sugtsName = await _dataAccess.GetSugtsName(sugtsValue);
-
-                        if (!enhancedParams.ContainsKey("sugtsname"))
-                        {
-                            enhancedParams.Add("sugtsname", new ParamValue(sugtsName, DbType.String));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorManager.LogWarning(
-                            ErrorCodes.Report.Parameters_Invalid,
-                            $"שגיאה בעיבוד פרמטר סוג חיוב (sugts): {ex.Message}");
-                    }
-                }
-                // טיפול בפרמטר רשימת סוגי חיוב (sugtslist)
-                else if (enhancedParams.TryGetValue("sugtslist", out ParamValue sugtsListParam) && sugtsListParam.Value != null)
-                {
-                    try
-                    {
-                        string sugtsListValue = sugtsListParam.Value.ToString();
-
-                        // בדיקה אם מדובר ברשימה עם ערך אחד בלבד
-                        if (!string.IsNullOrEmpty(sugtsListValue) && !sugtsListValue.Contains(","))
-                        {
-                            // אם יש רק ערך אחד, נשלוף את שם סוג החיוב
-                            if (int.TryParse(sugtsListValue, out int singleSugtsValue))
-                            {
-                                string sugtsName = await _dataAccess.GetSugtsName(singleSugtsValue);
-
-                                if (!enhancedParams.ContainsKey("sugtsname"))
-                                {
-                                    enhancedParams.Add("sugtsname", new ParamValue(sugtsName, DbType.String));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // אם יש מספר ערכים, נוסיף פרמטר עם הערה כללית
-                            if (!enhancedParams.ContainsKey("sugtsname"))
-                            {
-                                enhancedParams.Add("sugtsname", new ParamValue("מספר סוגי חיוב", DbType.String));
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorManager.LogWarning(
-                            ErrorCodes.Report.Parameters_Invalid,
-                            $"שגיאה בעיבוד פרמטר רשימת סוגי חיוב (sugtslist): {ex.Message}");
-                    }
-                }
-                else
-                {
-                    // אם לא נמצאו פרמטרים של סוג חיוב, נוסיף ערך ברירת מחדל
-                    if (!enhancedParams.ContainsKey("sugtsname"))
-                    {
-                        enhancedParams.Add("sugtsname", new ParamValue("כל סוגי החיוב", DbType.String));
-                    }
-                }
-
-                // טיפול בפרמטר יישוב (isvkod) - הוספת שם יישוב
-                if (enhancedParams.TryGetValue("isvkod", out ParamValue isvkodParam) && isvkodParam.Value != null)
-                {
-                    try
-                    {
-                        string isvkodValue = isvkodParam.Value.ToString();
-                    
-                        // בדיקה אם מדובר ברשימה או בערך בודד
-                        if (!string.IsNullOrEmpty(isvkodValue) && !isvkodValue.Contains(","))
-                        {
-                            // אם יש רק ערך אחד, נשלוף את שם היישוב
-                            if (int.TryParse(isvkodValue, out int singleIsvkodValue))
-                            {
-                                // קבלת שם היישוב
-                                string isvName = await _dataAccess.GetIshvName(singleIsvkodValue);
-
-                                if (!enhancedParams.ContainsKey("ishvname"))
-                                {
-                                    enhancedParams.Add("ishvname", new ParamValue(isvName, DbType.String));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // אם יש מספר ערכים, נוסיף פרמטר עם הערה כללית
-                            if (!enhancedParams.ContainsKey("ishvname"))
-                            {
-                                enhancedParams.Add("ishvname", new ParamValue("מספר יישובים", DbType.String));
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ErrorManager.LogWarning(
-                            ErrorCodes.Report.Parameters_Invalid,
-                            $"שגיאה בעיבוד פרמטר יישוב (isvkod): {ex.Message}");
-                    }
-                }
-                else
-                {
-                    // אם לא נמצא פרמטר יישוב, נוסיף ערך ברירת מחדל
-                    if (!enhancedParams.ContainsKey("ishvname"))
-                    {
-                        enhancedParams.Add("ishvname", new ParamValue("כל היישובים", DbType.String));
-                    }
-                }
+                await ProcessMonthParameter(enhancedParams);
+                await ProcessChargeTypeParameter(enhancedParams);
+                await ProcessSettlementParameter(enhancedParams);
+                await ProcessMoazaParameter(enhancedParams);
 
                 return enhancedParams;
             }
             catch (Exception ex)
             {
-                // לוג השגיאה והחזרת הפרמטרים המקוריים
                 ErrorManager.LogNormalError(
                     ErrorCodes.Report.Parameters_Invalid,
-                    "שגיאה בעיבוד פרמטרים מיוחדים",
+                    "Error processing special parameters",
                     ex);
-                    
+
                 return parameters;
             }
         }
+        private async Task ProcessMoazaParameter(Dictionary<string, ParamValue> parameters)
+        {
+            try
+            {
+                string moazaName = await _dataAccess.GetMoazaName();               
+                parameters.Add("rashutName", new ParamValue(moazaName, DbType.String));
+                
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogWarning(
+                    ErrorCodes.Report.Parameters_Invalid,
+                    $"Error processing moaza parameter: {ex.Message}");
+            }
+        }
+        private async Task ProcessMonthParameter(Dictionary<string, ParamValue> parameters)
+        {
+            if (parameters.TryGetValue("mnt", out ParamValue mntParam) && mntParam.Value != null)
+            {
+                try
+                {
+                    int mntValue = Convert.ToInt32(mntParam.Value);
+                    string monthName = await _dataAccess.GetMonthName(mntValue);
+                    string periodName = await _dataAccess.GetPeriodName(mntValue);
+
+                    if (!parameters.ContainsKey("mntname"))
+                    {
+                        parameters.Add("mntname", new ParamValue(monthName, DbType.String));
+                    }
+
+                    if (!parameters.ContainsKey("PeriodName"))
+                    {
+                        parameters.Add("PeriodName", new ParamValue(periodName, DbType.String));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.Report.Parameters_Invalid,
+                        $"Error processing month parameter (mnt): {ex.Message}");
+                }
+            }
+        }
+
+        private async Task ProcessChargeTypeParameter(Dictionary<string, ParamValue> parameters)
+        {
+            if (parameters.TryGetValue("sugts", out ParamValue sugtsParam) && sugtsParam.Value != null)
+            {
+                try
+                {
+                    int sugtsValue = Convert.ToInt32(sugtsParam.Value);
+                    string sugtsName = await _dataAccess.GetSugtsName(sugtsValue);
+
+                    if (!parameters.ContainsKey("sugtsname"))
+                    {
+                        parameters.Add("sugtsname", new ParamValue(sugtsName, DbType.String));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.Report.Parameters_Invalid,
+                        $"Error processing charge type parameter (sugts): {ex.Message}");
+                }
+            }
+            else if (parameters.TryGetValue("sugtslist", out ParamValue sugtsListParam) && sugtsListParam.Value != null)
+            {
+                try
+                {
+                    string sugtsListValue = sugtsListParam.Value.ToString();
+
+                    if (!string.IsNullOrEmpty(sugtsListValue) && !sugtsListValue.Contains(","))
+                    {
+                        if (int.TryParse(sugtsListValue, out int singleSugtsValue))
+                        {
+                            string sugtsName = await _dataAccess.GetSugtsName(singleSugtsValue);
+
+                            if (!parameters.ContainsKey("sugtsname"))
+                            {
+                                parameters.Add("sugtsname", new ParamValue(sugtsName, DbType.String));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (!parameters.ContainsKey("sugtsname"))
+                        {
+                            parameters.Add("sugtsname", new ParamValue("Multiple charge types", DbType.String));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.Report.Parameters_Invalid,
+                        $"Error processing charge type list parameter (sugtslist): {ex.Message}");
+                }
+            }
+            else
+            {
+                if (!parameters.ContainsKey("sugtsname"))
+                {
+                    parameters.Add("sugtsname", new ParamValue("All charge types", DbType.String));
+                }
+            }
+        }
+
+        private async Task ProcessSettlementParameter(Dictionary<string, ParamValue> parameters)
+        {
+            if (parameters.TryGetValue("isvkod", out ParamValue isvkodParam) && isvkodParam.Value != null)
+            {
+                try
+                {
+                    string isvkodValue = isvkodParam.Value.ToString();
+
+                    if (!string.IsNullOrEmpty(isvkodValue) && !isvkodValue.Contains(","))
+                    {
+                        if (int.TryParse(isvkodValue, out int singleIsvkodValue))
+                        {
+                            string isvName = await _dataAccess.GetIshvName(singleIsvkodValue);
+
+                            if (!parameters.ContainsKey("ishvname"))
+                            {
+                                parameters.Add("ishvname", new ParamValue(isvName, DbType.String));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (!parameters.ContainsKey("ishvname"))
+                        {
+                            parameters.Add("ishvname", new ParamValue("מספר יישובים", DbType.String));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorManager.LogWarning(
+                        ErrorCodes.Report.Parameters_Invalid,
+                        $"Error processing settlement parameter (isvkod): {ex.Message}");
+                }
+            }
+            else
+            {
+                if (!parameters.ContainsKey("ishvname"))
+                {
+                    parameters.Add("ishvname", new ParamValue("כל היישובים", DbType.String));
+                }
+            }
+        }
+
     }
 }

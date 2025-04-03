@@ -8,61 +8,90 @@ using System.Threading.Tasks;
 namespace ReportGenerator.Core.Generators
 {
     /// <summary>
-    /// מחולל PDF מבוסס HTML - משתמש בתבניות HTML ליצירת קבצי PDF
+    /// יוצר PDF מבוסס תבניות HTML
     /// </summary>
     public class HtmlBasedPdfGenerator
     {
         private readonly HtmlTemplateManager _templateManager;
         private readonly HtmlTemplateProcessor _templateProcessor;
-        private readonly IHtmlToPdfConverter _htmlToPdfConverter;
+        private readonly IHtmlToPdfConverter _pdfConverter;
 
         /// <summary>
-        /// יוצר מופע חדש של מחולל ה-PDF
+        /// יוצר מופע חדש של יוצר PDF מבוסס HTML
         /// </summary>
-        /// <param name="templateManager">מנהל תבניות HTML</param>
-        /// <param name="templateProcessor">מעבד תבניות HTML</param>
-        /// <param name="htmlToPdfConverter">ממיר HTML ל-PDF</param>
+        /// <param name="templateManager">מנהל תבניות</param>
+        /// <param name="templateProcessor">מעבד תבניות</param>
+        /// <param name="pdfConverter">ממיר HTML ל-PDF</param>
         public HtmlBasedPdfGenerator(
             HtmlTemplateManager templateManager,
             HtmlTemplateProcessor templateProcessor,
-            IHtmlToPdfConverter htmlToPdfConverter)
+            IHtmlToPdfConverter pdfConverter)
         {
             _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
             _templateProcessor = templateProcessor ?? throw new ArgumentNullException(nameof(templateProcessor));
-            _htmlToPdfConverter = htmlToPdfConverter ?? throw new ArgumentNullException(nameof(htmlToPdfConverter));
+            _pdfConverter = pdfConverter ?? throw new ArgumentNullException(nameof(pdfConverter));
         }
 
         /// <summary>
-        /// יצירת קובץ PDF מתבנית HTML
+        /// מייצר PDF מתבנית HTML
         /// </summary>
-        /// <param name="templateName">שם התבנית (ללא סיומת)</param>
+        /// <param name="templateName">שם התבנית</param>
         /// <param name="reportTitle">כותרת הדוח</param>
-        /// <param name="dataTables">מקורות הנתונים לדוח</param>
-        /// <param name="parameters">פרמטרים נוספים להחלפה בתבנית</param>
-        /// <returns>מערך בייטים של קובץ ה-PDF</returns>
+        /// <param name="dataTables">טבלאות נתונים</param>
+        /// <param name="parameters">פרמטרים שהועברו לדוח</param>
+        /// <returns>מערך בייטים של קובץ PDF</returns>
         public async Task<byte[]> GenerateFromTemplate(
             string templateName,
             string reportTitle,
             Dictionary<string, DataTable> dataTables,
-            Dictionary<string, ParamValue> parameters = null)
+            Dictionary<string, ParamValue> parameters)
         {
             try
             {
-                // 1. טעינת תבנית HTML
+                // הכנת מילון ערכים בסיסי
+                Dictionary<string, object> values = new Dictionary<string, object>
+                {
+                    { "ReportTitle", reportTitle },
+                    { "CurrentDate", DateTime.Now.ToString("dd/MM/yyyy") },
+                    { "CurrentTime", DateTime.Now.ToString("HH:mm") }
+                };
+
+                // הוספת פרמטרים למילון הערכים
+                foreach (var param in parameters)
+                {
+                    values[param.Key] = param.Value.Value ?? "";
+                }
+
+                // 1. טעינת התבנית
                 string templateHtml = await _templateManager.GetTemplateAsync(templateName);
-                
-                // 2. עיבוד התבנית והחלפת פלייסהולדרים
-                string processedHtml = _templateProcessor.ProcessTemplate(
-                    templateHtml, reportTitle, dataTables, parameters);
-                
-                // 3. המרת HTML ל-PDF
-                byte[] pdfBytes = await _htmlToPdfConverter.ConvertToPdfAsync(processedHtml);
-                
+
+                // 2. עיבוד התבנית
+                string processedHtml = _templateProcessor.ProcessTemplate(templateHtml, values, dataTables);
+
+                // 3. חילוץ כותרות עליונות ותחתונות
+                string headerHtml = _pdfConverter.ExtractHeaderFragment(processedHtml);
+                string footerHtml = _pdfConverter.ExtractFooterFragment(processedHtml);
+
+                // 4. המרה ל-PDF
+                byte[] pdfBytes;
+                if (!string.IsNullOrEmpty(headerHtml) || !string.IsNullOrEmpty(footerHtml))
+                {
+                    // אם יש כותרות, נשתמש בממיר עם כותרות מותאמות
+                    pdfBytes = await _pdfConverter.ConvertToPdfWithCustomHeaderFooter(
+                        processedHtml, reportTitle, headerHtml, footerHtml);
+                }
+                else
+                {
+                    // אחרת נשתמש בממיר הרגיל
+                    pdfBytes = await _pdfConverter.ConvertToPdf(processedHtml, reportTitle);
+                }
+
+                // רישום לוג של הצלחה
                 ErrorManager.LogInfo(
                     "PDF_Generation_Success",
                     $"קובץ PDF נוצר בהצלחה עבור דוח {templateName}. גודל: {pdfBytes.Length / 1024:N0} KB",
                     reportName: templateName);
-                    
+
                 return pdfBytes;
             }
             catch (Exception ex) when (ex is not ArgumentNullException)
@@ -95,8 +124,8 @@ namespace ReportGenerator.Core.Generators
                         ex,
                         reportName: templateName);
                 }
-                
-                throw new Exception($"Failed to generate PDF from template {templateName}", ex);
+
+                throw new Exception($"Error generating PDF from template {templateName}: {ex.Message}", ex);
             }
         }
     }

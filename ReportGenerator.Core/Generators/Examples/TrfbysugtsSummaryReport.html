@@ -149,7 +149,8 @@
 <body>
     <!-- כותרת הדוח -->
     <div class="report-header">
-        <div class="report-title">סיכום נתוני חיובים לסוג חיוב {{sugtsname}} </div>
+        <div class="report-title"> {{rashutName}} </div>
+        <div class="report-title">סיכום חיובים לסוג חיוב {{sugtsname}} </div>
         <div>לתקופה {{PeriodName}}</div>
     </div>
 
@@ -158,7 +159,7 @@
         <table class="params-table">
             <tr>
                 <td><strong>תאריך הפקה:</strong> {{CurrentDate}}</td>
-                <td><strong>קוד ישוב:</strong> {{ishvname}}</td>
+                <td><strong> ישוב:</strong> {{ishvname}}</td>
             </tr>
         </table>
     </div>
@@ -172,16 +173,12 @@
             <div data-table-row="GetTrfbysugtsSummaryPeriodic" class="summary-data">
                 <table class="summary-table">
                     <tr>
-                        <td>חיוב גולמי תקופתי:</td>
-                        <td>₪ {{paysum}}</td>
-                    </tr>
-                    <tr>
                         <td>חיוב גולמי שנתי:</td>
                         <td>₪ {{allbruto}}</td>
                     </tr>
                     <tr>
-                        <td>סכום לתשלום:</td>
-                        <td>₪ {{bruto}}</td>
+                        <td>חיוב גולמי תקופתי:</td>
+                        <td>₪ {{paysum}}</td>
                     </tr>
                     <tr>
                         <td>סכום הנחות ה.ק:</td>
@@ -190,6 +187,10 @@
                     <tr>
                         <td>סכום הנחות אחרות:</td>
                         <td>₪ {{sumhan}}</td>
+                    </tr>
+                    <tr>
+                        <td>סכום לתשלום:</td>
+                        <td>₪ {{bruto}}</td>
                     </tr>
                     <tr>
                         <td>מספר נכסים:</td>
@@ -299,8 +300,8 @@
         </tbody>
     </table>
 
-    <div class="footer">
-        מסמך זה הופק באמצעות מערכת הדוחות החדשה
+    <div class="page-footer">
+        מסמך זה הופק באמצעות מערכת הדוחות החדשה | עמוד {{PageNumber}} מתוך {{TotalPages}}
     </div>
 </body>
 </html>

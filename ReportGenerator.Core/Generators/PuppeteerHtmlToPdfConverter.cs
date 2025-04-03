@@ -87,7 +87,7 @@ namespace ReportGenerator.Core.Generators
                 // הגדרת encoding ושפה
                 await page.SetContentAsync(html, new NavigationOptions
                 {
-                    WaitUntil = new[] { WaitUntilNavigation.NetworkIdle }
+                    WaitUntil = new[] { WaitUntilNavigation.Networkidle0 }
                 });
                 
                 // המרה ל-PDF עם הגדרות מותאמות או ברירת מחדל

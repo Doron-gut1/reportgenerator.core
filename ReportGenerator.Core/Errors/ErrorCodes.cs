@@ -37,6 +37,8 @@ namespace ReportGenerator.Core.Errors
             public const string SugtsName_NotFound = "DB_SugtsName_NotFound";
             public const string MonthName_NotFound = "DB_MonthName_NotFound";
             public const string IshvName_NotFound = "DB_IshvName_NotFound";
+
+            public static string MoazaName_NotFound { get; internal set; }
         }
         
         // קודי שגיאה של תבניות HTML
