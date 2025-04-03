@@ -1,6 +1,0 @@
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\x86\Debug\net8.0\ReportTester.csproj.AssemblyReference.cache
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\x86\Debug\net8.0\ReportTester.GeneratedMSBuildEditorConfig.editorconfig
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\x86\Debug\net8.0\ReportTester.AssemblyInfoInputs.cache
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\x86\Debug\net8.0\ReportTester.AssemblyInfo.cs
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\x86\Debug\net8.0\ReportTester.csproj.CoreCompileInputs.cache
-C:\doron\TFS\gloabl projects\ReportGenerator.Core\ReportTester\obj\x86\Debug\net8.0\ReportTester.sourcelink.json
