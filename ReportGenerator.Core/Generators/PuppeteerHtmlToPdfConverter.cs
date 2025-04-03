@@ -24,7 +24,7 @@ namespace ReportGenerator.Core.Generators
         public PuppeteerHtmlToPdfConverter(string chromePath = null)
         {
             _chromePath = chromePath;
-            
+
             // יצירת הגדרות ברירת מחדל עבור PDF
             _defaultPdfOptions = new PdfOptions
             {
@@ -34,9 +34,10 @@ namespace ReportGenerator.Core.Generators
                 {
                     Top = "1cm",
                     Right = "1cm",
-                    Bottom = "1cm",
+                    Bottom = "2cm", // שוליים תחתונים גדולים יותר עבור הפוטר
                     Left = "1cm"
-                }
+                },
+                DisplayHeaderFooter = true // אפשור כותרות עליונות ותחתונות בכל העמודים
             };
         }
 
@@ -63,47 +64,40 @@ namespace ReportGenerator.Core.Generators
                 {
                     Headless = _useHeadless
                 };
-                
-                // אם נקבע נתיב ידני ל-Chrome, משתמשים בו
+
                 if (!string.IsNullOrEmpty(_chromePath))
                 {
                     browserOptions.ExecutablePath = _chromePath;
                 }
-                // אחרת מורידים את הגרסה הנדרשת אוטומטית
                 else
                 {
                     var browserFetcher = new BrowserFetcher();
                     await browserFetcher.DownloadAsync();
-                    
+
                     ErrorManager.LogInfo(
                         "Chrome_Downloaded",
                         "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
                 }
-                
-                // פתיחת דפדפן חדש
+
                 using var browser = await Puppeteer.LaunchAsync(browserOptions);
                 using var page = await browser.NewPageAsync();
-                
-                // הגדרת encoding ושפה
+
                 await page.SetContentAsync(html, new NavigationOptions
                 {
                     WaitUntil = new[] { WaitUntilNavigation.Networkidle0 }
                 });
-                
-                // המרה ל-PDF עם הגדרות מותאמות או ברירת מחדל
+
                 var pdfOptions = options as PdfOptions ?? _defaultPdfOptions;
                 var pdfBytes = await page.PdfDataAsync(pdfOptions);
-                
-                // תיעוד הצלחה
+
                 ErrorManager.LogInfo(
                     "PDF_Conversion_Success",
                     $"המרת HTML ל-PDF הושלמה בהצלחה. גודל: {pdfBytes.Length / 1024:N0} KB");
-                
+
                 return pdfBytes;
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                // שגיאת גישה לקובץ Chrome
                 ErrorManager.LogError(
                     ErrorCodes.PDF.Chrome_Not_Found,
                     ErrorSeverity.Critical,
@@ -121,6 +115,7 @@ namespace ReportGenerator.Core.Generators
                 throw new Exception("Error converting HTML to PDF", ex);
             }
         }
+
 
         /// <summary>
         /// המרת HTML מקובץ לקובץ PDF
@@ -140,22 +135,22 @@ namespace ReportGenerator.Core.Generators
                         $"קובץ HTML לא קיים: {htmlFilePath}");
                     throw new FileNotFoundException($"HTML file not found: {htmlFilePath}");
                 }
-                
+
                 // קריאת תוכן הקובץ
                 string htmlContent = await File.ReadAllTextAsync(htmlFilePath);
-                
+
                 // המרה ל-PDF
                 byte[] pdfBytes = await ConvertToPdfAsync(htmlContent);
-                
+
                 // שמירה לקובץ אם נדרש
                 if (!string.IsNullOrEmpty(pdfFilePath))
                 {
                     await File.WriteAllBytesAsync(pdfFilePath, pdfBytes);
                     ErrorManager.LogInfo(
-                        "PDF_File_Saved", 
+                        "PDF_File_Saved",
                         $"קובץ PDF נשמר: {pdfFilePath}");
                 }
-                
+
                 return pdfBytes;
             }
             catch (FileNotFoundException ex)
@@ -204,13 +199,12 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
-                // יצירת אפשרויות PDF חדשות עם כותרות עליונות ותחתונות
                 var options = new PdfOptions
                 {
                     Format = PaperFormat.A4,
                     PrintBackground = true,
                     HeaderTemplate = headerHtml ?? "<div/>",
-                    FooterTemplate = footerHtml ?? "<div style=\"text-align: center; font-size: 10pt;\">עמוד <span class=\"pageNumber\"></span> מתוך <span class=\"totalPages\"></span></div>",
+                    FooterTemplate = footerHtml ?? GetDefaultFooterTemplate(),
                     DisplayHeaderFooter = true,
                     MarginOptions = new MarginOptions
                     {
@@ -221,14 +215,12 @@ namespace ReportGenerator.Core.Generators
                     }
                 };
 
-                // הוספת כותרת אם יש
                 if (!string.IsNullOrEmpty(title))
                 {
                     html = html.Replace("<title></title>", $"<title>{title}</title>");
                     html = html.Replace("<title>", $"<title>{title} - ");
                 }
 
-                // המרה ל-PDF עם כותרות מותאמות
                 return await ConvertToPdfAsync(html, options);
             }
             catch (Exception ex)
@@ -238,11 +230,11 @@ namespace ReportGenerator.Core.Generators
                     ErrorSeverity.Error,
                     "שגיאה בהמרת HTML עם כותרות מותאמות ל-PDF",
                     ex);
-                    
-                // אם נכשל, ננסה להמיר ללא כותרות מותאמות
+
                 return await ConvertToPdf(html, title);
             }
         }
+
 
         /// <summary>
         /// חילוץ חלק הכותרת העליונה מתבנית HTML
@@ -254,20 +246,20 @@ namespace ReportGenerator.Core.Generators
             try
             {
                 // חיפוש תגית header או div עם class שמכיל header
-                var headerMatch = Regex.Match(html, 
-                    @"<header.*?>(.*?)</header>|<div\s+class=(['""]).*?header.*?\2.*?>(.*?)</div>", 
+                var headerMatch = Regex.Match(html,
+                    @"<header.*?>(.*?)</header>|<div\s+class=(['""]).*?header.*?\2.*?>(.*?)</div>",
                     RegexOptions.Singleline);
-                
+
                 if (headerMatch.Success)
                 {
                     // החזרת התוכן שנמצא עם עיצוב
-                    string content = headerMatch.Groups[1].Success 
-                        ? headerMatch.Groups[1].Value 
+                    string content = headerMatch.Groups[1].Success
+                        ? headerMatch.Groups[1].Value
                         : headerMatch.Groups[3].Value;
-                        
+
                     return $"<div style='text-align: center; width: 100%; font-family: Arial, sans-serif; direction: rtl;'>{content}</div>";
                 }
-                
+
                 // אם לא נמצא, מחזיר כותרת ברירת מחדל
                 return "<div style='text-align: center; font-size: 10pt;'></div>";
             }
@@ -277,7 +269,7 @@ namespace ReportGenerator.Core.Generators
                     ErrorCodes.PDF.Html_Conversion_Failed,
                     "שגיאה בחילוץ כותרת עליונה מ-HTML",
                     ex);
-                    
+
                 return "<div style='text-align: center; font-size: 10pt;'></div>";
             }
         }
@@ -292,22 +284,22 @@ namespace ReportGenerator.Core.Generators
             try
             {
                 // חיפוש תגית footer או div עם class שמכיל footer
-                var footerMatch = Regex.Match(html, 
-                    @"<footer.*?>(.*?)</footer>|<div\s+class=(['""]).*?footer.*?\2.*?>(.*?)</div>", 
+                var footerMatch = Regex.Match(html,
+                    @"<footer.*?>(.*?)</footer>|<div\s+class=(['""]).*?footer.*?\2.*?>(.*?)</div>",
                     RegexOptions.Singleline);
-                
+
                 if (footerMatch.Success)
                 {
                     // החזרת התוכן שנמצא עם עיצוב
-                    string content = footerMatch.Groups[1].Success 
-                        ? footerMatch.Groups[1].Value 
+                    string content = footerMatch.Groups[1].Success
+                        ? footerMatch.Groups[1].Value
                         : footerMatch.Groups[3].Value;
-                    
+
                     return $"<div style='text-align: center; width: 100%; font-family: Arial, sans-serif; direction: rtl;'>{content}</div>";
                 }
-                
-                // אם לא נמצא, מחזיר כותרת תחתונה ברירת מחדל עם מספרי עמודים
-                return "<div style='text-align: center; font-size: 10pt;'>עמוד <span class='pageNumber'></span> מתוך <span class='totalPages'></span></div>";
+
+                // אם לא נמצא, מחזיר את תבנית הפוטר המורחבת הברירת מחדל
+                return GetDefaultFooterTemplate();
             }
             catch (Exception ex)
             {
@@ -315,9 +307,21 @@ namespace ReportGenerator.Core.Generators
                     ErrorCodes.PDF.Html_Conversion_Failed,
                     "שגיאה בחילוץ כותרת תחתונה מ-HTML",
                     ex);
-                    
-                return "<div style='text-align: center; font-size: 10pt;'>עמוד <span class='pageNumber'></span> מתוך <span class='totalPages'></span></div>";
+
+                return GetDefaultFooterTemplate();
             }
+        }
+
+        /// <summary>
+        /// יוצר תבנית פוטר ברירת מחדל עם מספור עמודים
+        /// </summary>
+        private string GetDefaultFooterTemplate()
+        {
+            return @"
+            <div style='width: 100%; font-size: 10px; padding: 5px 10px; text-align: center; direction: rtl; font-family: Arial, sans-serif;'>
+                <div>מסמך זה הופק באמצעות מערכת הדוחות החדשה</div>
+                <div>עמוד <span class=""pageNumber""></span> מתוך <span class=""totalPages""></span></div>
+            </div>";
         }
     }
 }

@@ -65,13 +65,14 @@ namespace ReportGenerator.Core.Generators
                 // 1. טעינת התבנית
                 string templateHtml = await _templateManager.GetTemplateAsync(templateName);
 
-                // 2. עיבוד התבנית
+                // 2. עיבוד התבנית - הערה: מעבד התבנית מטפל עכשיו גם בפלייסהולדרים של מספור עמודים
                 string processedHtml = _templateProcessor.ProcessTemplate(templateHtml, values, dataTables);
 
                 // 3. חילוץ כותרות עליונות ותחתונות
                 string headerHtml = _pdfConverter.ExtractHeaderFragment(processedHtml);
                 string footerHtml = _pdfConverter.ExtractFooterFragment(processedHtml);
-
+                File.WriteAllText($"{templateName}_processed.html", processedHtml);
+               
                 // 4. המרה ל-PDF
                 byte[] pdfBytes;
                 if (!string.IsNullOrEmpty(headerHtml) || !string.IsNullOrEmpty(footerHtml))

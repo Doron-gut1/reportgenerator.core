@@ -178,7 +178,7 @@
                     </tr>
                     <tr>
                         <td>חיוב גולמי תקופתי:</td>
-                        <td>₪ {{paysum}}</td>
+                        <td>₪ {{bruto}}</td>
                     </tr>
                     <tr>
                         <td>סכום הנחות ה.ק:</td>
@@ -190,7 +190,7 @@
                     </tr>
                     <tr>
                         <td>סכום לתשלום:</td>
-                        <td>₪ {{bruto}}</td>
+                        <td>₪ {{paysum}}</td>
                     </tr>
                     <tr>
                         <td>מספר נכסים:</td>
@@ -213,20 +213,20 @@
                 <table class="summary-table">
                     <tr>
                         <td>חיוב גולמי שנתי:</td>
-                        <td>₪ {{paysum}}</td>
-                    </tr>
-                    <tr>
-                        <td>סכום לתשלום:</td>
                         <td>₪ {{bruto}}</td>
                     </tr>
-                    <tr>
-                        <td>סכום הנחות מימון:</td>
+                        <td>סכום הנחות ה.ק:</td>
                         <td>₪ {{sumhk}}</td>
                     </tr>
                     <tr>
                         <td>סכום הנחות אחרות:</td>
                         <td>₪ {{sumhan}}</td>
                     </tr>
+                    <tr>
+                        <td>סכום לתשלום:</td>
+                        <td>₪ {{paysum}}</td>
+                    </tr>
+                    <tr>
                     <tr>
                         <td>מספר נכסים:</td>
                         <td>{{cnths}}</td>
@@ -255,7 +255,7 @@
         <tbody>
             <!-- שינוי: כל שורה צריכה להיות בתוך TR עם data-table-row -->
             <tr data-table-row="GetTrfbysugtsPaymentMethodSummary">
-                {{#if hesder == -1}}
+                {{#if IsSummary == 1}}
                 <td class="payment-total"><strong>סה"כ</strong></td>
                 <td class="amount payment-total"><strong>₪ {{paysum}}</strong></td>
                 <td class="amount payment-total"><strong>₪ {{sumhk}}</strong></td>
@@ -299,9 +299,5 @@
             </tr>
         </tbody>
     </table>
-
-    <div class="page-footer">
-        מסמך זה הופק באמצעות מערכת הדוחות החדשה | עמוד {{PageNumber}} מתוך {{TotalPages}}
-    </div>
 </body>
 </html>

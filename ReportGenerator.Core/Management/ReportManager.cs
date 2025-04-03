@@ -363,7 +363,7 @@ namespace ReportGenerator.Core.Management
                     {
                         if (!parameters.ContainsKey("sugtsname"))
                         {
-                            parameters.Add("sugtsname", new ParamValue("Multiple charge types", DbType.String));
+                            parameters.Add("sugtsname", new ParamValue("מספר סוגי חיוב", DbType.String));
                         }
                     }
                 }
@@ -378,7 +378,7 @@ namespace ReportGenerator.Core.Management
             {
                 if (!parameters.ContainsKey("sugtsname"))
                 {
-                    parameters.Add("sugtsname", new ParamValue("All charge types", DbType.String));
+                    parameters.Add("sugtsname", new ParamValue("כל סוגי חיוב", DbType.String));
                 }
             }
         }

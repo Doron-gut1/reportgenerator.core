@@ -36,6 +36,20 @@ namespace ReportGenerator.Core.Generators
                     writer.Write(FormatValue(parameters[0]));
                 }
             });
+
+            _handlebars.RegisterHelper("notEqualZero", (writer, options, context, arguments) => {
+                if (arguments.Length > 0 && arguments[0] != null && int.TryParse(arguments[0].ToString(), out int value))
+                {
+                    if (value != 0)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
         }
 
         /// <summary>
@@ -89,6 +103,9 @@ namespace ReportGenerator.Core.Generators
                     }
                 }
 
+                // 5. טיפול בפלייסהולדרים של מספור עמודים
+                result = HandlePagePlaceholders(result);
+
                 return result;
             }
             catch (Exception ex) when (!(ex is ArgumentException))
@@ -109,16 +126,16 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
-                if (table.Columns.Contains("hesder"))
+                if (table.Columns.Contains("isSummary"))
                 {
                     foreach (DataRow row in table.Rows)
                     {
-                        if (row["hesder"] != DBNull.Value)
+                        if (row["isSummary"] != DBNull.Value)
                         {
-                            if (row["hesder"] is int intValue && intValue == -1)
+                            if (row["isSummary"] is int intValue && (intValue == -1 || intValue == 1))
                                 return row;
 
-                            if (int.TryParse(row["hesder"].ToString(), out int parsedValue) && parsedValue == -1)
+                            if (int.TryParse(row["isSummary"].ToString(), out int parsedValue) && parsedValue == 1)
                                 return row;
                         }
                     }
@@ -498,9 +515,32 @@ namespace ReportGenerator.Core.Generators
         }
 
         /// <summary>
+        /// מטפל בפלייסהולדרים של מספור עמודים
+        /// </summary>
+        private string HandlePagePlaceholders(string template)
+        {
+            try
+            {
+                // החלפת פלייסהולדרים של מספרי עמודים בתגיות מיוחדות של Puppeteer
+                template = template.Replace("{{PageNumber}}", "<span class='pageNumber'></span>");
+                template = template.Replace("{{TotalPages}}", "<span class='totalPages'></span>");
+
+                return template;
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogWarning(
+                    ErrorCodes.Template.Processing_Failed,
+                    "שגיאה בעיבוד פלייסהולדרים של מספרי עמודים",
+                    ex);
+                return template;
+            }
+        }
+
+        /// <summary>
         /// פורמט ערכים לתצוגה
         /// </summary>
-        private string FormatValue(object value)
+        public static string FormatValue(object value)
         {
             if (value == null || value == DBNull.Value)
                 return string.Empty;

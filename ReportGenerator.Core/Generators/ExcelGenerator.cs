@@ -1,357 +1,251 @@
-﻿using OfficeOpenXml;
-using OfficeOpenXml.Style;
-using ReportGenerator.Core.Errors;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.IO;
-using System.Text.RegularExpressions;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace ReportGenerator.Core.Generators
 {
-    /// <summary>
-    /// מחולל קבצי Excel - מייצר קבצי Excel מנתוני הדוח
-    /// </summary>
     public class ExcelGenerator
     {
         private readonly Dictionary<string, string> _columnMappings;
+        private readonly List<string> _hiddenColumns = new List<string> { "IsSummary" };
 
         /// <summary>
-        /// יוצר מופע חדש של מחולל האקסל
+        /// יוצר מופע חדש של יוצר קבצי אקסל
         /// </summary>
-        /// <param name="columnMappings">מילון מיפויים של שמות עמודות לשמות בעברית</param>
+        /// <param name="columnMappings">מילון מיפויים בין שמות עמודות באנגלית לעברית</param>
         public ExcelGenerator(Dictionary<string, string> columnMappings = null)
         {
             _columnMappings = columnMappings ?? new Dictionary<string, string>();
-            
-            // הגדרת רישיון EPPlus כלא מסחרי לצורכי פיתוח
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         }
 
         /// <summary>
-        /// יצירת קובץ Excel מנתוני הדוחות
+        /// יוצר קובץ אקסל מטבלת נתונים
         /// </summary>
-        /// <param name="dataTables">מילון של טבלאות נתונים (מפתח = שם הטבלה)</param>
+        /// <param name="data">טבלת נתונים מקורית</param>
+        /// <returns>מערך בייטים של קובץ אקסל</returns>
+        //public byte[] Generate(DataTable data)
+        //{
+        //    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        //    using (var package = new ExcelPackage())
+        //    {
+        //        var worksheet = package.Workbook.Worksheets.Add("Report");
+
+        //        // הגדרת כיווניות לעברית
+        //        worksheet.View.RightToLeft = true;
+
+        //        // הוספת כותרות בעברית
+        //        for (int i = 0; i < data.Columns.Count; i++)
+        //        {
+        //            string columnName = data.Columns[i].ColumnName;
+        //            string hebrewName = GetHebrewColumnName(columnName);
+
+        //            worksheet.Cells[1, i + 1].Value = hebrewName;
+        //            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
+        //            worksheet.Cells[1, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+        //            worksheet.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+        //        }
+
+        //        // הוספת נתונים
+        //        for (int row = 0; row < data.Rows.Count; row++)
+        //        {
+        //            for (int col = 0; col < data.Columns.Count; col++)
+        //            {
+        //                var cell = worksheet.Cells[row + 2, col + 1];
+        //                var value = data.Rows[row][col];
+
+        //                cell.Value = value;
+
+        //                // התאמת פורמט לסוג הנתונים
+        //                if (value is decimal || value is double || value is float)
+        //                {
+        //                    cell.Style.Numberformat.Format = "#,##0.00";
+        //                    cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+        //                }
+        //                else if (value is DateTime)
+        //                {
+        //                    cell.Style.Numberformat.Format = "dd/MM/yyyy";
+        //                }
+        //            }
+        //        }
+
+        //        // עיצוב אוטומטי של רוחב עמודות
+        //        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        //        return package.GetAsByteArray();
+        //    }
+        //}
+
+        /// <summary>
+        /// יוצר קובץ אקסל ממספר טבלאות נתונים
+        /// </summary>
+        /// <param name="dataTables">מילון טבלאות נתונים</param>
         /// <param name="reportTitle">כותרת הדוח</param>
-        /// <returns>מערך בייטים של קובץ האקסל</returns>
+        /// <returns>מערך בייטים של קובץ אקסל</returns>
         public byte[] Generate(Dictionary<string, DataTable> dataTables, string reportTitle)
         {
             if (dataTables == null || dataTables.Count == 0)
-            {
-                ErrorManager.LogError(
-                    ErrorCodes.Excel.Data_Format_Invalid,
-                    ErrorSeverity.Critical,
-                    "לא ניתן לייצר קובץ Excel ללא נתונים");
                 throw new ArgumentException("No data provided for Excel generation");
-            }
 
-            try
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using (var package = new ExcelPackage())
             {
-                using var package = new ExcelPackage();
-                int sheetIndex = 0;
-                
                 foreach (var tableEntry in dataTables)
                 {
                     string tableName = tableEntry.Key;
                     DataTable data = tableEntry.Value;
-                    
-                    // יצירת שם לגיליון
-                    string sheetName = GetValidSheetName(tableName, sheetIndex);
-                    sheetIndex++;
-                    
+
+                    if (data.Rows.Count == 0)
+                        continue;
+
                     // יצירת גיליון חדש
-                    var worksheet = package.Workbook.Worksheets.Add(sheetName);
-                    
+                    var worksheet = package.Workbook.Worksheets.Add(tableName);
+
                     // הגדרת כיווניות RTL
                     worksheet.View.RightToLeft = true;
-                    
+
                     // הוספת כותרת הדוח
-                    AddReportTitle(worksheet, reportTitle, data.Columns.Count);
-                    
-                    // הוספת כותרות בעברית
-                    AddHebrewHeaders(worksheet, data, tableName);
-                    
-                    // הוספת הנתונים
-                    AddDataRows(worksheet, data);
-                    
-                    // עיצוב הגיליון
-                    FormatWorksheet(worksheet, data);
-                }
-                
-                byte[] excelBytes = package.GetAsByteArray();
-                
-                ErrorManager.LogInfo(
-                    "Excel_Generation_Success",
-                    $"קובץ Excel נוצר בהצלחה. גודל: {excelBytes.Length / 1024:N0} KB");
-                    
-                return excelBytes;
-            }
-            catch (Exception ex)
-            {
-                ErrorManager.LogError(
-                    ErrorCodes.Excel.Generation_Failed,
-                    ErrorSeverity.Critical,
-                    "שגיאה ביצירת קובץ Excel",
-                    ex);
-                throw new Exception("Failed to generate Excel file", ex);
-            }
-        }
+                    worksheet.Cells[1, 1].Value = reportTitle;
+                    worksheet.Cells[1, 1, 1, data.Columns.Count].Merge = true;
+                    worksheet.Cells[1, 1].Style.Font.Bold = true;
+                    worksheet.Cells[1, 1].Style.Font.Size = 14;
+                    worksheet.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-        /// <summary>
-        /// קבלת שם תקף לגיליון אקסל
-        /// </summary>
-        private string GetValidSheetName(string originalName, int index)
-        {
-            // הסרת תווים לא חוקיים
-            string safeName = Regex.Replace(originalName, @"[\[\]\*\?/\\]", "_");
-            
-            // ניקוי מנקודות, dbo וכו'
-            safeName = safeName.Replace("dbo.", "")
-                .Replace(".", "_")
-                .Trim();
-                
-            // הגבלת אורך שם הגיליון ל-31 תווים (מגבלה של Excel)
-            if (safeName.Length > 31)
-            {
-                safeName = safeName.Substring(0, 28) + "_" + index;
-            }
-            
-            // אם השם ריק, שימוש בשם ברירת מחדל
-            if (string.IsNullOrWhiteSpace(safeName))
-            {
-                safeName = $"Sheet_{index + 1}";
-            }
-            
-            return safeName;
-        }
+                    // הוספת תאריך הפקה
+                    worksheet.Cells[2, 1].Value = $"תאריך הפקה: {DateTime.Now:dd/MM/yyyy}";
+                    worksheet.Cells[2, 1, 2, data.Columns.Count].Merge = true;
+                    worksheet.Cells[2, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-        /// <summary>
-        /// הוספת כותרת הדוח לגיליון
-        /// </summary>
-        private void AddReportTitle(ExcelWorksheet worksheet, string reportTitle, int columnCount)
-        {
-            try
-            {
-                // הוספת כותרת הדוח
-                worksheet.Cells[1, 1].Value = reportTitle;
-                if (columnCount > 1)
-                {
-                    worksheet.Cells[1, 1, 1, columnCount].Merge = true;
-                }
-                
-                // עיצוב כותרת
-                var titleCell = worksheet.Cells[1, 1, 1, columnCount];
-                titleCell.Style.Font.Bold = true;
-                titleCell.Style.Font.Size = 14;
-                titleCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                titleCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                titleCell.Style.Fill.BackgroundColor.SetColor(Color.LightSteelBlue);
-                
-                // הוספת תאריך הפקה
-                worksheet.Cells[2, 1].Value = $"תאריך הפקה: {DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")}";
-                if (columnCount > 1)
-                {
-                    worksheet.Cells[2, 1, 2, columnCount].Merge = true;
-                }
-                
-                // עיצוב תאריך
-                worksheet.Cells[2, 1, 2, columnCount].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                worksheet.Cells[2, 1, 2, columnCount].Style.Font.Bold = true;
-            }
-            catch (Exception ex)
-            {
-                ErrorManager.LogWarning(
-                    ErrorCodes.Excel.Generation_Failed,
-                    $"שגיאה בהוספת כותרת הדוח לקובץ Excel: {ex.Message}");
-                // ממשיך בכל זאת כדי ליצור את הקובץ
-            }
-        }
+                    // יצירת רשימת עמודות שיוצגו (ללא העמודות המוסתרות)
+                    var visibleColumns = new List<DataColumn>();
+                    var columnIndexMap = new Dictionary<int, int>(); // ממפה מאינדקס מקורי לאינדקס בפלט
 
-        /// <summary>
-        /// הוספת כותרות בעברית לגיליון
-        /// </summary>
-        private void AddHebrewHeaders(ExcelWorksheet worksheet, DataTable data, string tableName)
-        {
-            try
-            {
-                // שורת כותרות (אחרי הכותרת הראשית ותאריך ההפקה)
-                const int headerRow = 4;
-                
-                // הוספת כותרות
-                for (int col = 0; col < data.Columns.Count; col++)
-                {
-                    string columnName = data.Columns[col].ColumnName;
-                    string hebrewHeader = GetHebrewHeaderName(columnName, tableName);
-                    
-                    // הוספת כותרת בעברית
-                    worksheet.Cells[headerRow, col + 1].Value = hebrewHeader;
-                    
-                    // עיצוב תא הכותרת
-                    var headerCell = worksheet.Cells[headerRow, col + 1];
-                    headerCell.Style.Font.Bold = true;
-                    headerCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    headerCell.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-                    headerCell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
-                    headerCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorManager.LogWarning(
-                    ErrorCodes.Excel.Column_Mapping_Failed,
-                    $"שגיאה בהוספת כותרות בעברית לקובץ Excel: {ex.Message}");
-                // ממשיך בכל זאת כדי ליצור את הקובץ
-            }
-        }
-
-        /// <summary>
-        /// קבלת כותרת בעברית לעמודה
-        /// </summary>
-        private string GetHebrewHeaderName(string columnName, string tableName)
-        {
-            try
-            {
-                // בדיקה אם יש מיפוי ישיר
-                if (_columnMappings.TryGetValue(columnName, out string mappedName))
-                    return mappedName;
-                
-                // בדיקה לפי קונבנציית TableName_ColumnName
-                int underscoreIndex = columnName.IndexOf('_');
-                if (underscoreIndex > 0 && underscoreIndex < columnName.Length - 1)
-                {
-                    // הפרדת שם הטבלה ושם העמודה
-                    string compositeKey = columnName;
-                    
-                    // בדיקה אם יש מיפוי לשם המורכב
-                    if (_columnMappings.TryGetValue(compositeKey, out mappedName))
-                        return mappedName;
-                }
-                
-                // אם לא נמצא מיפוי, מחזיר את השם המקורי
-                return columnName;
-            }
-            catch (Exception ex)
-            {
-                ErrorManager.LogWarning(
-                    ErrorCodes.Excel.Column_Mapping_Failed,
-                    $"שגיאה בקבלת שם עברי לעמודה {columnName}: {ex.Message}");
-                return columnName; // במקרה של שגיאה, מחזיר את השם המקורי
-            }
-        }
-
-        /// <summary>
-        /// הוספת שורות נתונים לגיליון
-        /// </summary>
-        private void AddDataRows(ExcelWorksheet worksheet, DataTable data)
-        {
-            try
-            {
-                // התחלה משורה 5 (אחרי כותרת הדוח, תאריך הפקה ושורת כותרות)
-                const int startRow = 5;
-                
-                // הוספת כל שורות הנתונים
-                for (int row = 0; row < data.Rows.Count; row++)
-                {
                     for (int col = 0; col < data.Columns.Count; col++)
                     {
-                        // הוספת הערך
-                        var cell = worksheet.Cells[startRow + row, col + 1];
-                        var value = data.Rows[row][col];
-                        
-                        if (value != DBNull.Value && value != null)
+                        if (!_hiddenColumns.Contains(data.Columns[col].ColumnName))
                         {
+                            visibleColumns.Add(data.Columns[col]);
+                            columnIndexMap[col] = visibleColumns.Count - 1;
+                        }
+                    }
+
+                    // הוספת כותרות בעברית (רק לעמודות גלויות)
+                    for (int col = 0; col < visibleColumns.Count; col++)
+                    {
+                        string columnName = visibleColumns[col].ColumnName;
+                        string hebrewHeader = GetHebrewColumnName(columnName);
+
+                        worksheet.Cells[4, col + 1].Value = hebrewHeader;
+                        worksheet.Cells[4, col + 1].Style.Font.Bold = true;
+                        worksheet.Cells[4, col + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        worksheet.Cells[4, col + 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+                        worksheet.Cells[4, col + 1].Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                    }
+
+                    // הוספת נתונים
+                    for (int row = 0; row < data.Rows.Count; row++)
+                    {
+                        // בדיקה אם זו שורת סיכום - פיצול התנאי לשלבים
+                        bool isSummaryRow = false;
+
+                        if (data.Columns.Contains("IsSummary") && data.Rows[row]["IsSummary"] != DBNull.Value)
+                        {
+                            var summaryValue = data.Rows[row]["IsSummary"];
+
+                            // בדיקה אם הערך הוא Boolean
+                            if (summaryValue is bool boolValue)
+                            {
+                                isSummaryRow = boolValue;
+                            }
+                            // בדיקה אם הערך הוא מספר (1 = אמת)
+                            else if (summaryValue is int intValue)
+                            {
+                                isSummaryRow = (intValue == 1);
+                            }
+                            // בדיקה אם הערך הוא מחרוזת
+                            else if (summaryValue is string strValue)
+                            {
+                                if (bool.TryParse(strValue, out bool parsedBool))
+                                {
+                                    isSummaryRow = parsedBool;
+                                }
+                                else if (int.TryParse(strValue, out int parsedInt))
+                                {
+                                    isSummaryRow = (parsedInt == 1);
+                                }
+                            }
+                        }
+                        // בדיקה אם זו שורת סיכום לפי שדה hesder
+                        //else if (data.Columns.Contains("hesder") && data.Rows[row]["hesder"] != DBNull.Value)
+                        //{
+                        //    var hesderValue = data.Rows[row]["hesder"];
+
+                        //    if (hesderValue is int intValue && intValue == -1)
+                        //        isSummaryRow = true;
+                        //    else if (int.TryParse(hesderValue.ToString(), out int parsedValue) && parsedValue == -1)
+                        //        isSummaryRow = true;
+                        //}
+
+                        // הוספת התאים (רק לעמודות גלויות)
+                        for (int colIdx = 0; colIdx < data.Columns.Count; colIdx++)
+                        {
+                            // דלג על עמודות מוסתרות
+                            if (!columnIndexMap.ContainsKey(colIdx))
+                                continue;
+
+                            int excelColIdx = columnIndexMap[colIdx] + 1;
+                            var cell = worksheet.Cells[row + 5, excelColIdx];
+                            var value = data.Rows[row][colIdx];
+
                             cell.Value = value;
-                            
-                            // עיצוב בהתאם לסוג הנתונים
-                            ApplyCellFormatting(cell, value);
+                            cell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+
+                            // עיצוב שורת סיכום
+                            if (isSummaryRow)
+                            {
+                                cell.Style.Font.Bold = true;
+                                cell.Style.Font.Color.SetColor(Color.FromArgb(0, 85, 170)); // כחול
+                                cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                                cell.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(240, 248, 255)); // רקע כחול בהיר
+                            }
+
+                            // התאמת סוג נתונים
+                            if (value is decimal || value is double || value is float)
+                            {
+                                cell.Style.Numberformat.Format = "#,##0.00";
+                                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                            }
+                            else if (value is DateTime)
+                            {
+                                cell.Style.Numberformat.Format = "dd/MM/yyyy";
+                            }
                         }
-                        else
-                        {
-                            cell.Value = string.Empty;
-                        }
-                        
-                        // עיצוב בסיסי לכל תא
-                        cell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
                     }
+
+                    // התאמת רוחב עמודות
+                    worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
                 }
-            }
-            catch (Exception ex)
-            {
-                ErrorManager.LogWarning(
-                    ErrorCodes.Excel.Data_Format_Invalid,
-                    $"שגיאה בהוספת נתונים לקובץ Excel: {ex.Message}");
-                // ממשיך בכל זאת כדי ליצור את הקובץ
+
+                return package.GetAsByteArray();
             }
         }
 
         /// <summary>
-        /// הוספת עיצוב בהתאם לסוג הנתונים
+        /// מקבל את השם העברי של עמודה מתוך מילון המיפויים
         /// </summary>
-        private void ApplyCellFormatting(ExcelRange cell, object value)
+        /// <param name="columnName">שם העמודה באנגלית</param>
+        /// <returns>שם עברי מהמיפוי, או שם העמודה המקורי אם אין מיפוי</returns>
+        private string GetHebrewColumnName(string columnName)
         {
-            if (value is decimal || value is double || value is float)
-            {
-                cell.Style.Numberformat.Format = "#,##0.00";
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
-            }
-            else if (value is int || value is long)
-            {
-                cell.Style.Numberformat.Format = "#,##0";
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
-            }
-            else if (value is DateTime)
-            {
-                cell.Style.Numberformat.Format = "dd/mm/yyyy";
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            }
-            else if (value is bool)
-            {
-                cell.Value = (bool)value ? "כן" : "לא";
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            }
-            else
-            {
-                cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
-            }
-        }
+            if (_columnMappings.TryGetValue(columnName, out string hebrewName))
+                return hebrewName;
 
-        /// <summary>
-        /// עיצוב כללי של הגיליון
-        /// </summary>
-        private void FormatWorksheet(ExcelWorksheet worksheet, DataTable data)
-        {
-            try
-            {
-                // התאמת רוחב עמודות באופן אוטומטי
-                worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
-                
-                // מינימום רוחב לעמודות צרות מדי
-                const double minColumnWidth = 8;
-                
-                for (int col = 1; col <= data.Columns.Count; col++)
-                {
-                    double currentWidth = worksheet.Column(col).Width;
-                    if (currentWidth < minColumnWidth)
-                    {
-                        worksheet.Column(col).Width = minColumnWidth;
-                    }
-                    else if (currentWidth > 100) // מקסימום רוחב
-                    {
-                        worksheet.Column(col).Width = 100;
-                    }
-                }
-                
-                // הגדרת קפיאת שורות כותרת
-                worksheet.View.FreezePanes(5, 1);
-            }
-            catch (Exception ex)
-            {
-                ErrorManager.LogWarning(
-                    ErrorCodes.Excel.Style_Invalid,
-                    $"שגיאה בעיצוב גיליון Excel: {ex.Message}");
-                // ממשיך בכל זאת כדי ליצור את הקובץ
-            }
+            return columnName; // אם אין מיפוי, להחזיר את שם העמודה המקורי
         }
     }
 }
