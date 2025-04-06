@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace ReportGenerator.Core.Generators
@@ -5,7 +6,7 @@ namespace ReportGenerator.Core.Generators
     /// <summary>
     /// ממשק לממירי HTML ל-PDF
     /// </summary>
-    public interface IHtmlToPdfConverter
+    public interface IHtmlToPdfConverter : IDisposable
     {
         /// <summary>
         /// ממיר תוכן HTML ל-PDF
