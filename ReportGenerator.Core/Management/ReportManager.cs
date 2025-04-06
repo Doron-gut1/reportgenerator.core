@@ -7,6 +7,7 @@ using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Generators;
 using ReportGenerator.Core.Management.Enums;
 using ReportGenerator.Core.Errors;
+using ReportGenerator.Core.Services;
 
 namespace ReportGenerator.Core.Management
 {
@@ -15,11 +16,11 @@ namespace ReportGenerator.Core.Management
     /// </summary>
     public class ReportManager
     {
-        private readonly DataAccess _dataAccess;
-        private readonly HtmlTemplateManager _templateManager;
-        private HtmlTemplateProcessor _templateProcessor;
-        private readonly HtmlBasedPdfGenerator _htmlPdfGenerator;
-        private ExcelGenerator _excelGenerator;
+        private readonly IDataAccess _dataAccess;
+        private readonly ITemplateManager _templateManager;
+        private readonly ITemplateProcessor _templateProcessor;
+        private readonly IPdfGenerator _pdfGenerator;
+        private readonly IExcelGenerator _excelGenerator;
 
         /// <summary>
         /// יוצר מופע חדש של מנהל הדוחות
@@ -48,7 +49,7 @@ namespace ReportGenerator.Core.Management
                 var pdfConverter = new PuppeteerHtmlToPdfConverter(chromePath);
                 
                 // יוצר ה-PDF מבוסס HTML
-                _htmlPdfGenerator = new HtmlBasedPdfGenerator(_templateManager, _templateProcessor, pdfConverter);
+                _pdfGenerator = new HtmlBasedPdfGenerator(_templateManager, _templateProcessor, pdfConverter);
                 
                 // יוצר אקסל ללא מיפויי כותרות בשלב זה (יוגדרו מאוחר יותר)
                 _excelGenerator = new ExcelGenerator();
@@ -99,10 +100,10 @@ namespace ReportGenerator.Core.Management
                 // קבלת מיפויי שמות עמודות לעברית
                 var columnMappings = await _dataAccess.GetColumnMappings(reportConfig.StoredProcName);
                 
-                if(format == OutputFormat.PDF)               
-                    _templateProcessor = new HtmlTemplateProcessor(columnMappings);   // עדכון מעבד התבניות עם המיפויים
+                if (format == OutputFormat.PDF)               
+                    ((HtmlTemplateProcessor)_templateProcessor).UpdateColumnMappings(columnMappings);   // עדכון מעבד התבניות עם המיפויים
                 else          
-                    _excelGenerator = new ExcelGenerator(columnMappings); // עדכון מחלקת האקסל עם המיפויים
+                    ((ExcelGenerator)_excelGenerator).UpdateColumnMappings(columnMappings); // עדכון מחלקת האקסל עם המיפויים
                 
                 parsedParams = await ProcessSpecialParameters(parsedParams);
                 
@@ -114,7 +115,7 @@ namespace ReportGenerator.Core.Management
                 if (format == OutputFormat.PDF)
                 {
                     // וידוא שתבנית HTML קיימת
-                    if (!_templateManager.TemplateExists(reportName))
+                    if (!await _templateManager.TemplateExistsAsync(reportName))
                     {
                         ErrorManager.LogCriticalError(
                             ErrorCodes.Template.Not_Found,
@@ -125,13 +126,13 @@ namespace ReportGenerator.Core.Management
                     }
                     
                     // שימוש בגישה החדשה מבוססת HTML
-                    result = await _htmlPdfGenerator.GenerateFromTemplate(
+                    result = await _pdfGenerator.GenerateFromTemplate(
                         reportName, reportConfig.Title, dataTables, parsedParams);
                 }
                 else // Excel
                 {
                     // יצירת קובץ אקסל עם כל הנתונים
-                    result = _excelGenerator.Generate(dataTables, reportConfig.Title);
+                    result = await _excelGenerator.GenerateAsync(dataTables, reportConfig.Title);
                 }
                 
                 var duration = DateTime.Now - startTime;
