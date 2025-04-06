@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;
@@ -11,11 +12,16 @@ namespace ReportGenerator.Core.Generators
     /// <summary>
     /// ממיר HTML ל-PDF באמצעות PuppeteerSharp (Chrome Headless)
     /// </summary>
-    public class PuppeteerHtmlToPdfConverter : IHtmlToPdfConverter
+    public class PuppeteerHtmlToPdfConverter : IHtmlToPdfConverter, IDisposable
     {
         private readonly string _chromePath;
         private readonly bool _useHeadless = true;
         private readonly PdfOptions _defaultPdfOptions;
+        
+        // Singleton pattern for browser instance
+        private static readonly SemaphoreSlim _browserLock = new SemaphoreSlim(1, 1);
+        private static Browser _browser;
+        private static bool _browserInitialized = false;
 
         /// <summary>
         /// יוצר מופע חדש של ממיר HTML ל-PDF
@@ -42,6 +48,47 @@ namespace ReportGenerator.Core.Generators
         }
 
         /// <summary>
+        /// מקבל מופע קיים של הדפדפן או יוצר חדש אם צריך
+        /// </summary>
+        private async Task<Browser> GetBrowserInstanceAsync()
+        {
+            await _browserLock.WaitAsync();
+            try
+            {
+                if (_browser == null || _browser.IsClosed)
+                {
+                    var browserOptions = new LaunchOptions
+                    {
+                        Headless = _useHeadless
+                    };
+
+                    if (!string.IsNullOrEmpty(_chromePath))
+                    {
+                        browserOptions.ExecutablePath = _chromePath;
+                    }
+                    else if (!_browserInitialized)
+                    {
+                        var browserFetcher = new BrowserFetcher();
+                        await browserFetcher.DownloadAsync();
+                        _browserInitialized = true;
+
+                        ErrorManager.LogInfo(
+                            "Chrome_Downloaded",
+                            "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
+                    }
+
+                    _browser = await Puppeteer.LaunchAsync(browserOptions);
+                }
+                
+                return _browser;
+            }
+            finally
+            {
+                _browserLock.Release();
+            }
+        }
+
+        /// <summary>
         /// המרת HTML לקובץ PDF
         /// </summary>
         /// <param name="html">תוכן ה-HTML להמרה</param>
@@ -60,26 +107,8 @@ namespace ReportGenerator.Core.Generators
 
             try
             {
-                var browserOptions = new LaunchOptions
-                {
-                    Headless = _useHeadless
-                };
-
-                if (!string.IsNullOrEmpty(_chromePath))
-                {
-                    browserOptions.ExecutablePath = _chromePath;
-                }
-                else
-                {
-                    var browserFetcher = new BrowserFetcher();
-                    await browserFetcher.DownloadAsync();
-
-                    ErrorManager.LogInfo(
-                        "Chrome_Downloaded",
-                        "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
-                }
-
-                using var browser = await Puppeteer.LaunchAsync(browserOptions);
+                // שימוש במנגנון Singleton לדפדפן
+                var browser = await GetBrowserInstanceAsync();
                 using var page = await browser.NewPageAsync();
 
                 await page.SetContentAsync(html, new NavigationOptions
@@ -322,6 +351,28 @@ namespace ReportGenerator.Core.Generators
                 <div>מסמך זה הופק באמצעות מערכת הדוחות החדשה</div>
                 <div>עמוד <span class=""pageNumber""></span> מתוך <span class=""totalPages""></span></div>
             </div>";
+        }
+
+        /// <summary>
+        /// ניקוי משאבים בסיום השימוש
+        /// </summary>
+        public void Dispose()
+        {
+            try
+            {
+                // ננסה לסגור את הדפדפן בצורה מסודרת
+                if (_browser != null && !_browser.IsClosed)
+                {
+                    _browser.CloseAsync().GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.LogWarning(
+                    "Browser_Dispose_Failed",
+                    "שגיאה בסגירת דפדפן Chrome",
+                    ex);
+            }
         }
     }
 }
