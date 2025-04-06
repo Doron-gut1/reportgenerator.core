@@ -1,8 +1,9 @@
-﻿using ReportGenerator.Core.Data.Models;
+using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace ReportGenerator.Core.Generators
@@ -10,11 +11,12 @@ namespace ReportGenerator.Core.Generators
     /// <summary>
     /// יוצר PDF מבוסס תבניות HTML
     /// </summary>
-    public class HtmlBasedPdfGenerator
+    public class HtmlBasedPdfGenerator : IDisposable
     {
         private readonly HtmlTemplateManager _templateManager;
         private readonly HtmlTemplateProcessor _templateProcessor;
         private readonly IHtmlToPdfConverter _pdfConverter;
+        private bool _disposed = false;
 
         /// <summary>
         /// יוצר מופע חדש של יוצר PDF מבוסס HTML
@@ -71,7 +73,11 @@ namespace ReportGenerator.Core.Generators
                 // 3. חילוץ כותרות עליונות ותחתונות
                 string headerHtml = _pdfConverter.ExtractHeaderFragment(processedHtml);
                 string footerHtml = _pdfConverter.ExtractFooterFragment(processedHtml);
+                
+                // כתיבת ה-HTML המעובד לקובץ לצורכי דיבוג (רק בסביבת פיתוח)
+                #if DEBUG
                 File.WriteAllText($"{templateName}_processed.html", processedHtml);
+                #endif
                
                 // 4. המרה ל-PDF
                 byte[] pdfBytes;
@@ -128,6 +134,41 @@ namespace ReportGenerator.Core.Generators
 
                 throw new Exception($"Error generating PDF from template {templateName}: {ex.Message}", ex);
             }
+        }
+
+        /// <summary>
+        /// שחרור משאבים
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// שחרור משאבים - מימוש פנימי
+        /// </summary>
+        /// <param name="disposing">האם לשחרר משאבים מנוהלים</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // שחרור משאבים מנוהלים
+                    _pdfConverter?.Dispose();
+                }
+
+                _disposed = true;
+            }
+        }
+
+        /// <summary>
+        /// פינאלייזר
+        /// </summary>
+        ~HtmlBasedPdfGenerator()
+        {
+            Dispose(false);
         }
     }
 }
