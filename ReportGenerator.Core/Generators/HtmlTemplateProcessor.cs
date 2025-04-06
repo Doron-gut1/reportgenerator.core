@@ -1,8 +1,10 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using HandlebarsDotNet;
@@ -17,6 +19,18 @@ namespace ReportGenerator.Core.Generators
     {
         private readonly Dictionary<string, string> _columnMappings;
         private readonly IHandlebars _handlebars;
+        
+        // מטמון עבור תבניות מקומפלות
+        private readonly ConcurrentDictionary<string, HandlebarsTemplate<object, object>> _compiledTemplates = 
+            new ConcurrentDictionary<string, HandlebarsTemplate<object, object>>();
+            
+        // מטמון עבור תבניות ביטויים רגולריים מקומפלים
+        private readonly ConcurrentDictionary<string, Regex> _compiledRegexes = 
+            new ConcurrentDictionary<string, Regex>();
+            
+        // מטמון עבור מיפויי כותרות
+        private readonly ConcurrentDictionary<string, string> _headerMappingCache = 
+            new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// יוצר מופע חדש של מעבד תבניות
@@ -27,7 +41,10 @@ namespace ReportGenerator.Core.Generators
             _columnMappings = columnMappings ?? new Dictionary<string, string>();
 
             // אתחול מנוע Handlebars
-            _handlebars = Handlebars.Create();
+            _handlebars = Handlebars.Create(new HandlebarsConfiguration
+            {
+                NoEscape = true // אין צורך לברוח מתווים מיוחדים ב-HTML
+            });
 
             // רישום הלפר לפורמט מספרים
             _handlebars.RegisterHelper("format", (writer, context, parameters) => {
@@ -50,6 +67,30 @@ namespace ReportGenerator.Core.Generators
                     }
                 }
             });
+            
+            // מקומפל מראש ביטויים רגולריים נפוצים
+            CompileCommonRegexPatterns();
+        }
+        
+        /// <summary>
+        /// מקמפל מראש ביטויים רגולריים שכיחים לשיפור ביצועים
+        /// </summary>
+        private void CompileCommonRegexPatterns()
+        {
+            // ביטוי רגולרי לכותרות
+            _compiledRegexes["header_pattern"] = new Regex(
+                @"\{\{HEADER:([^}]+)\}\}",
+                RegexOptions.Compiled);
+                
+            // ביטוי רגולרי לתנאים Handlebars
+            _compiledRegexes["if_else_pattern"] = new Regex(
+                @"\{\{#if\s+([^\s]+)\s*==\s*(-?\d+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{/if\}\}",
+                RegexOptions.Compiled);
+                
+            // ביטוי רגולרי לטבלאות דינמיות
+            _compiledRegexes["dynamic_table_pattern"] = new Regex(
+                @"<(tr|div)[^>]*data-table-row=""([^""]+)""[^>]*>(.*?)</\1>",
+                RegexOptions.Compiled | RegexOptions.Singleline);
         }
 
         /// <summary>
@@ -75,6 +116,49 @@ namespace ReportGenerator.Core.Generators
                     throw new ArgumentException("Template cannot be null or empty");
                 }
 
+                // בדיקה אם התבנית כבר קיימת במטמון הקימפולים
+                string templateKey = ComputeTemplateHash(template);
+                if (_compiledTemplates.TryGetValue(templateKey, out var compiledTemplate))
+                {
+                    // נבדוק אם אפשר להשתמש בתבנית מקומפלת מראש
+                    if (IsSimpleTemplate(template))
+                    {
+                        // אם זו תבנית פשוטה שמתאימה לשימוש ב-Handlebars (ללא טבלאות דינמיות)
+                        // יצירת אובייקט עם הערכים הדרושים
+                        var templateData = new Dictionary<string, object>(values);
+                        
+                        // הוספת ערכים מובנים
+                        templateData["CurrentDate"] = DateTime.Now.ToString("dd/MM/yyyy");
+                        templateData["CurrentTime"] = DateTime.Now.ToString("HH:mm:ss");
+                        templateData["PageNumber"] = "<span class='pageNumber'></span>";
+                        templateData["TotalPages"] = "<span class='totalPages'></span>";
+                        
+                        // הוספת כותרות עמודות מתורגמות
+                        var headerMatches = _compiledRegexes["header_pattern"].Matches(template);
+                        foreach (Match match in headerMatches)
+                        {
+                            string columnName = match.Groups[1].Value;
+                            string headerKey = $"HEADER:{columnName}";
+                            
+                            // בדיקה אם הכותרת כבר קיימת במטמון
+                            if (!templateData.ContainsKey(headerKey))
+                            {
+                                if (!_headerMappingCache.TryGetValue(columnName, out string hebrewHeader))
+                                {
+                                    hebrewHeader = GetHebrewName(columnName, null);
+                                    _headerMappingCache[columnName] = hebrewHeader;
+                                }
+                                
+                                templateData[headerKey] = hebrewHeader;
+                            }
+                        }
+                        
+                        // הרצת התבנית עם הנתונים
+                        return compiledTemplate(templateData);
+                    }
+                }
+
+                // הפעלת העיבוד הרגיל עבור תבניות מורכבות
                 // 1. החלפת פלייסהולדרים פשוטים
                 string result = ProcessSimplePlaceholders(template, values);
 
@@ -106,6 +190,23 @@ namespace ReportGenerator.Core.Generators
                 // 5. טיפול בפלייסהולדרים של מספור עמודים
                 result = HandlePagePlaceholders(result);
 
+                // אם זו תבנית חדשה, נשמור אותה במטמון אם היא מתאימה
+                if (IsSimpleTemplate(template) && !_compiledTemplates.ContainsKey(templateKey))
+                {
+                    try
+                    {
+                        var compiled = _handlebars.Compile(template);
+                        _compiledTemplates[templateKey] = compiled;
+                    }
+                    catch (Exception ex)
+                    {
+                        // אם יש שגיאה בקימפול, פשוט נמשיך בלי לשמור במטמון
+                        ErrorManager.LogWarning(
+                            "Template_Compilation_Failed",
+                            $"לא ניתן לקמפל תבנית: {ex.Message}");
+                    }
+                }
+
                 return result;
             }
             catch (Exception ex) when (!(ex is ArgumentException))
@@ -116,6 +217,27 @@ namespace ReportGenerator.Core.Generators
                     "שגיאה בעיבוד תבנית HTML",
                     ex);
                 throw new Exception("Error processing HTML template", ex);
+            }
+        }
+        
+        /// <summary>
+        /// בודק אם התבנית היא פשוטה מספיק כדי להשתמש ב-Handlebars
+        /// </summary>
+        private bool IsSimpleTemplate(string template)
+        {
+            // תבניות פשוטות הן תבניות ללא טבלאות דינמיות
+            return !_compiledRegexes["dynamic_table_pattern"].IsMatch(template);
+        }
+        
+        /// <summary>
+        /// מייצר מפתח hash לתבנית לשימוש במטמון
+        /// </summary>
+        private string ComputeTemplateHash(string template)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(template));
+                return Convert.ToBase64String(hashBytes);
             }
         }
 
@@ -194,19 +316,22 @@ namespace ReportGenerator.Core.Generators
             {
                 if (values == null)
                     return template;
+                
+                // יוצרים חוצץ למהירות עבודה טובה יותר
+                StringBuilder sb = new StringBuilder(template);
 
                 foreach (var entry in values)
                 {
                     string placeholder = $"{{{{{entry.Key}}}}}";
                     string value = FormatValue(entry.Value);
-                    template = template.Replace(placeholder, value);
+                    sb.Replace(placeholder, value);
                 }
 
                 // הוספת ערכים מובנים
-                template = template.Replace("{{CurrentDate}}", DateTime.Now.ToString("dd/MM/yyyy"));
-                template = template.Replace("{{CurrentTime}}", DateTime.Now.ToString("HH:mm:ss"));
+                sb.Replace("{{CurrentDate}}", DateTime.Now.ToString("dd/MM/yyyy"));
+                sb.Replace("{{CurrentTime}}", DateTime.Now.ToString("HH:mm:ss"));
 
-                return template;
+                return sb.ToString();
             }
             catch (Exception ex)
             {
@@ -225,14 +350,10 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
-                // תבנית מורחבת לתנאי if-else בתחביר Handlebars
-                string pattern = @"\{\{#if\s+([^\s]+)\s*==\s*(-?\d+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{/if\}\}";
-                //Console.WriteLine($"pattern: {pattern}");
-
-                var matches = Regex.Matches(html, pattern);
-                // Console.WriteLine($"matches.Count: {matches.Count}");
-
-                return Regex.Replace(html, pattern, match => {
+                // שימוש בביטוי רגולרי מקומפל
+                var ifPattern = _compiledRegexes["if_else_pattern"];
+                
+                return ifPattern.Replace(html, match => {
                     string fieldName = match.Groups[1].Value;
                     string valueStr = match.Groups[2].Value;
                     string trueContent = match.Groups[3].Value;
@@ -314,6 +435,10 @@ namespace ReportGenerator.Core.Generators
             try
             {
                 int startIndex = 0;
+                
+                // יצירת StringBuilder לביצועים טובים יותר
+                StringBuilder result = new StringBuilder(html.Length);
+                int lastAppendedIndex = 0;
 
                 while (true)
                 {
@@ -323,30 +448,41 @@ namespace ReportGenerator.Core.Generators
 
                     int sectionEnd = html.IndexOf(endTag, sectionStart + startTag.Length, StringComparison.OrdinalIgnoreCase);
                     if (sectionEnd < 0) break;
+                    
+                    // הוסף את הקטע מהאינדקס האחרון שהוספנו עד תחילת הקטע הנוכחי
+                    if (sectionStart > lastAppendedIndex)
+                    {
+                        result.Append(html, lastAppendedIndex, sectionStart - lastAppendedIndex);
+                    }
 
                     // חילוץ הקטע
-                    string section = html.Substring(sectionStart, sectionEnd - sectionStart + endTag.Length);
+                    string sectionContent = html.Substring(sectionStart, sectionEnd - sectionStart + endTag.Length);
 
                     // בדיקה אם יש תנאים בקטע
-                    if (section.Contains("{{#if") && section.Contains("{{else}}") && section.Contains("{{/if}}"))
+                    if (sectionContent.Contains("{{#if") && sectionContent.Contains("{{else}}") && sectionContent.Contains("{{/if}}"))
                     {
                         // עיבוד התנאים בקטע
-                        string processedSection = ProcessHandlebarsConditions(section, dataRow);
-
-                        // החלפת הקטע המקורי בקטע המעובד
-                        html = html.Substring(0, sectionStart) + processedSection + html.Substring(sectionEnd + endTag.Length);
-
-                        // עדכון אינדקס ההתחלה לחיפוש הבא
-                        startIndex = sectionStart + processedSection.Length;
+                        string processedSection = ProcessHandlebarsConditions(sectionContent, dataRow);
+                        result.Append(processedSection);
                     }
                     else
                     {
-                        // אם אין תנאים, המשך לקטע הבא
-                        startIndex = sectionEnd + endTag.Length;
+                        // אם אין תנאים, הוסף את הקטע כמו שהוא
+                        result.Append(sectionContent);
                     }
+                    
+                    // עדכון אינדקסים
+                    lastAppendedIndex = sectionEnd + endTag.Length;
+                    startIndex = lastAppendedIndex;
+                }
+                
+                // הוסף את יתרת ה-HTML
+                if (lastAppendedIndex < html.Length)
+                {
+                    result.Append(html, lastAppendedIndex, html.Length - lastAppendedIndex);
                 }
 
-                return html;
+                return result.ToString();
             }
             catch (Exception ex)
             {
@@ -369,6 +505,15 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
+                // בדיקה במטמון קודם
+                string cacheKey = $"{procName ?? ""}_{columnName}";
+                if (_headerMappingCache.TryGetValue(cacheKey, out string cachedName))
+                {
+                    return cachedName;
+                }
+                
+                string result;
+                
                 // בדיקה אם יש "_" בשם השדה
                 int underscoreIndex = columnName.IndexOf('_');
 
@@ -381,17 +526,23 @@ namespace ReportGenerator.Core.Generators
                     // חיפוש בטבלת המיפויים
                     string mappingKey = $"{tableName}_{fieldName}";
                     if (_columnMappings.TryGetValue(mappingKey, out string mappedName))
-                        return mappedName;
+                        result = mappedName;
+                    else
+                        result = columnName;
                 }
                 else
                 {
                     // שדה מחושב - חיפוש לפי שם השדה ישירות
                     if (_columnMappings.TryGetValue(columnName, out string mappedName))
-                        return mappedName;
+                        result = mappedName;
+                    else
+                        result = columnName;
                 }
-
-                // אם לא מצאנו מיפוי, נחזיר את השם המקורי
-                return columnName;
+                
+                // הוספה למטמון
+                _headerMappingCache[cacheKey] = result;
+                
+                return result;
             }
             catch (Exception ex)
             {
@@ -410,17 +561,30 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
-                var headerMatches = Regex.Matches(template, @"\{\{HEADER:([^}]+)\}\}");
+                var headerMatches = _compiledRegexes["header_pattern"].Matches(template);
+                
+                // אם אין התאמות, נחזיר את התבנית המקורית
+                if (headerMatches.Count == 0)
+                    return template;
+                
+                // משתמשים ב-StringBuilder לביצועים טובים יותר
+                StringBuilder sb = new StringBuilder(template);
 
                 foreach (Match match in headerMatches)
                 {
                     string columnName = match.Groups[1].Value;
-                    string hebrewHeader = GetHebrewName(columnName, null);
+                    
+                    // בדיקה במטמון
+                    if (!_headerMappingCache.TryGetValue(columnName, out string hebrewHeader))
+                    {
+                        hebrewHeader = GetHebrewName(columnName, null);
+                        _headerMappingCache[columnName] = hebrewHeader;
+                    }
 
-                    template = template.Replace(match.Value, hebrewHeader);
+                    sb.Replace(match.Value, hebrewHeader);
                 }
 
-                return template;
+                return sb.ToString();
             }
             catch (Exception ex)
             {
@@ -442,10 +606,15 @@ namespace ReportGenerator.Core.Generators
                 if (dataTables == null || dataTables.Count == 0)
                     return template;
 
-                // ביטוי רגולרי משופר שתומך גם ב-TR וגם ב-DIV
-                var tableRowMatches = Regex.Matches(template,
-                    @"<(tr|div)[^>]*data-table-row=""([^""]+)""[^>]*>(.*?)</\1>",
-                    RegexOptions.Singleline);
+                // שימוש בביטוי רגולרי מקומפל
+                var tableRowMatches = _compiledRegexes["dynamic_table_pattern"].Matches(template);
+                
+                // אם אין התאמות, נחזיר את התבנית המקורית
+                if (tableRowMatches.Count == 0)
+                    return template;
+                
+                // הכנת מבנה נתונים לשמירת ההחלפות
+                Dictionary<string, string> replacements = new Dictionary<string, string>();
 
                 foreach (Match match in tableRowMatches)
                 {
@@ -464,12 +633,15 @@ namespace ReportGenerator.Core.Generators
                             $"לא נמצאו נתונים לטבלה: {tableName}");
 
                         string noDataRow = "<div>אין נתונים להצגה</div>";
-                        template = template.Replace(match.Value, noDataRow);
+                        replacements[match.Value] = noDataRow;
                         continue;
                     }
 
                     var dataTable = dataTables[keyToUse];
-                    StringBuilder rowsBuilder = new StringBuilder();
+                    
+                    // אומדן גודל החוצץ לפי מספר השורות וגודל התבנית
+                    int estimatedSize = dataTable.Rows.Count * (rowTemplate.Length + 20);
+                    StringBuilder rowsBuilder = new StringBuilder(estimatedSize);
 
                     foreach (DataRow row in dataTable.Rows)
                     {
@@ -478,31 +650,43 @@ namespace ReportGenerator.Core.Generators
                         // עיבוד תנאים בתחביר Handlebars
                         currentRow = ProcessHandlebarsConditions(currentRow, row);
 
-                        // החלפת פלייסהולדרים בערכים
+                        // החלפת פלייסהולדרים בערכים - בניית מפתחות להחלפה מראש
+                        Dictionary<string, string> rowReplacements = new Dictionary<string, string>();
                         foreach (DataColumn col in dataTable.Columns)
                         {
                             string placeholder = $"{{{{{col.ColumnName}}}}}";
-                            string value = FormatValue(row[col]);
-
+                            
+                            // רק אם הפלייסהולדר קיים בשורה, נבצע חישוב וניצור ערך להחלפה
                             if (currentRow.Contains(placeholder))
                             {
-                                currentRow = currentRow.Replace(placeholder, value);
+                                string value = FormatValue(row[col]);
+                                rowReplacements[placeholder] = value;
                             }
                         }
-
-                        // שינוי כאן - לא מוסיפים תגי TR נוספים
-                        //                        rowsBuilder.AppendLine($"<tr>{currentRow}</tr>");
+                        
+                        // ביצוע ההחלפות בפועל
+                        foreach (var replacement in rowReplacements)
+                        {
+                            currentRow = currentRow.Replace(replacement.Key, replacement.Value);
+                        }
 
                         if (tagName.ToLower() == "tr")
                             rowsBuilder.AppendLine($"<tr>{currentRow}</tr>");
                         else
-                            rowsBuilder.Append($"<{tagName}>{currentRow}</{tagName}>");
+                            rowsBuilder.AppendLine($"<{tagName}>{currentRow}</{tagName}>");
                     }
 
-                    template = template.Replace(match.Value, rowsBuilder.ToString());
+                    replacements[match.Value] = rowsBuilder.ToString();
+                }
+                
+                // ביצוע כל ההחלפות בפעם אחת
+                string result = template;
+                foreach (var replacement in replacements)
+                {
+                    result = result.Replace(replacement.Key, replacement.Value);
                 }
 
-                return template;
+                return result;
             }
             catch (Exception ex)
             {
@@ -634,6 +818,15 @@ namespace ReportGenerator.Core.Generators
                     ex);
                 return null;
             }
+        }
+        
+        /// <summary>
+        /// ניקוי המטמון
+        /// </summary>
+        public void ClearCache()
+        {
+            _compiledTemplates.Clear();
+            _headerMappingCache.Clear();
         }
     }
 }
