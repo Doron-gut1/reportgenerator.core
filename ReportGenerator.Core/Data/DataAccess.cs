@@ -1,12 +1,17 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
+using ReportGenerator.Core.Services;
+using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ReportGenerator.Core.Data
 {
-    public class DataAccess
+    public class DataAccess : IDataAccess
     {
         private readonly string _connectionString;
 
