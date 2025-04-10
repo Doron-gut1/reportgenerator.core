@@ -1,0 +1,25 @@
+name: Mirror to GitLab
+
+on:
+  push:
+    branches:
+      - main  # שנה אם אתה עובד על branch אחר
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Push to GitLab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLABTOKEN }}
+        run: |
+          git config --global user.name "Doron Gut"
+          git config --global user.email "dorong@eprsys.co.il"
+
+          git remote add gitlab https://oauth2:${GITLAB_TOKEN}@gitlab.com/YOUR_GITLAB_USERNAME/reportgenerator.core.git
+
+          git push --mirror gitlab
