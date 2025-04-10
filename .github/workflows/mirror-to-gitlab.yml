@@ -17,5 +17,6 @@ jobs:
         run: |
           git config --global user.name "Doron Gut"
           git config --global user.email "dorong@eprsys.co.il"
-          git remote add gitlab https://oauth2:${GITLAB_TOKEN}@gitlab.com/epr-gvia/reportgenerator.core
-          git push --mirror gitlab
+          git remote add gitlab https://oauth2:${GITLAB_TOKEN}@gitlab.com/epr-gvia/reportgenerator.core.git
+          git fetch --all
+          git push gitlab 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
