@@ -622,7 +622,7 @@ namespace ReportGenerator.Core.Data
         /// <summary>
         /// מקבל מידע על פרמטרים של פרוצדורה מאוחסנת
         /// </summary>
-        private async Task<IEnumerable<ParameterInfo>> GetProcedureParameters(string procName)
+        public async Task<IEnumerable<ParameterInfo>> GetProcedureParameters(string procName)
         {
             try
             {

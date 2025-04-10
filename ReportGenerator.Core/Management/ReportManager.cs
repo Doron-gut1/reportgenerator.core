@@ -67,7 +67,57 @@ namespace ReportGenerator.Core.Management
                 throw new Exception("שגיאה באתחול מנהל הדוחות", ex);
             }
         }
+        public void GenerateReportAsync(string reportName, OutputFormat format, params object[] parameters)
+        {
+            // הפעלת התהליך בחוט נפרד
+            Task.Run(async () =>
+            {
+                try
+                {
+                    // הפקת הדוח באמצעות המתודה הקיימת - שים לב לawait
+                    byte[] reportData = await Task.Run(() => GenerateReport(reportName, format, parameters));
 
+                    // כל השאר נשאר אותו דבר
+                    string DEFAULT_WORKING_DIRECTORY = "C:\\Epr";
+                    string TEMP_DATA_FOLDER = "Temp";
+                    string localDrive = Path.Combine(DEFAULT_WORKING_DIRECTORY, TEMP_DATA_FOLDER);
+                    //string targetFilePath = Path.Combine(@"\\tsclient\", localDrive.Replace(":", ""));
+                    string targetFilePath = localDrive;
+
+                    // וידוא שהתיקיות קיימות
+                    Directory.CreateDirectory(localDrive);
+                    Directory.CreateDirectory(targetFilePath);
+
+                    // קביעת סיומת הקובץ
+                    string fileExt = format == OutputFormat.PDF ? "pdf" : "xlsx";
+
+                    // יצירת שם קובץ ייחודי
+                    string fileName = $"{reportName}_{DateTime.Now:yyyyMMdd_HHmmss}.{fileExt}";
+                    string fullPath = Path.Combine(targetFilePath, fileName);
+
+                    // שמירת הקובץ
+                    File.WriteAllBytes(fullPath, reportData);
+
+                    // יצירת קובץ הדיאלוג
+                    string listenerDialogFile = Path.Combine(targetFilePath,
+                        $"{Path.GetFileNameWithoutExtension(fileName)}.opdialog");
+                    File.Create(listenerDialogFile).Close();
+
+                    ErrorManager.LogInfo(
+                        "Report_Saved_Successfully",
+                        $"הדוח {reportName} נשמר בהצלחה בנתיב {fullPath}",
+                        reportName: reportName);
+                }
+                catch (Exception ex)
+                {
+                    ErrorManager.LogCriticalError(
+                        ErrorCodes.Report.Generation_Failed,
+                        $"שגיאה בהפקת ושמירת דוח {reportName}",
+                        ex,
+                        reportName: reportName);
+                }
+            });
+        }
         /// <summary>
         /// מייצר דוח לפי שם, פורמט ופרמטרים
         /// </summary>
@@ -79,27 +129,30 @@ namespace ReportGenerator.Core.Management
         {
             // ניקוי שגיאות מהפקות קודמות
             ErrorManager.ClearErrors();
-            
+
             // רישום תחילת הפקת הדוח
             ErrorManager.LogInfo(
                 "Report_Generation_Started",
                 $"התחלת הפקת דוח {reportName} בפורמט {format}");
-                
+
             // מעקב אחר משך זמן ההפקה
             var startTime = DateTime.Now;
-            
+
             try
             {
-                // המרת פרמטרים למילון
-                var parsedParams = ParseParameters(parameters);
-                
                 // קבלת הגדרות הדוח
                 var reportConfig = await _dataAccess.GetReportConfig(reportName);
-                
+
+                // שינוי כאן: קודם נקבל את שם הפרוצדורה ואז נפרסר פרמטרים
+                string procName = reportConfig.StoredProcName.Split(';')[0].Trim(); // מקבלים את הפרוצדורה הראשונה
+
+                // המרת פרמטרים למילון כולל הוספת פרמטרים חסרים
+                var parsedParams = await ParseParameters(reportName, procName, parameters);
+
                 // קבלת מיפויי שמות עמודות לעברית
                 var columnMappings = await _dataAccess.GetColumnMappings(reportConfig.StoredProcName);
-                
-                if(format == OutputFormat.PDF)               
+
+                if (format == OutputFormat.PDF)               
                     _templateProcessor = new HtmlTemplateProcessor(columnMappings);   // עדכון מעבד התבניות עם המיפויים
                 else          
                     _excelGenerator = new ExcelGenerator(columnMappings); // עדכון מחלקת האקסל עם המיפויים
@@ -160,79 +213,78 @@ namespace ReportGenerator.Core.Management
         /// <summary>
         /// המרת מערך פרמטרים לפורמט המובן למערכת
         /// </summary>
-        private Dictionary<string, ParamValue> ParseParameters(object[] paramArray)
+        /// <summary>
+        /// המרת מערך פרמטרים לפורמט המובן למערכת ומוסיף פרמטרים חסרים
+        /// </summary>
+        private async Task<Dictionary<string, ParamValue>> ParseParameters(string reportName, string procName, object[] paramArray)
         {
             var result = new Dictionary<string, ParamValue>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                if (paramArray == null || paramArray.Length == 0)
+                // 1. פירוש הפרמטרים שהועברו
+                if (paramArray != null && paramArray.Length > 0)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.Report.Parameters_Missing,
-                        "לא הועברו פרמטרים להפקת הדוח");
-                    return result;
-                }
-
-                for (int i = 0; i < paramArray.Length; i += 3)
-                {
-                    if (i + 2 >= paramArray.Length)
+                    for (int i = 0; i < paramArray.Length; i += 3)
                     {
-                        ErrorManager.LogError(
-                            ErrorCodes.Report.Parameters_Invalid,
-                            ErrorSeverity.Error,
-                            "מערך הפרמטרים אינו בפורמט הנכון");
-
-                        throw new ArgumentException("Parameter array is not in the correct format");
-                    }
-
-                    // בדיקת שם פרמטר
-                    string paramName = paramArray[i]?.ToString();
-                    if (string.IsNullOrEmpty(paramName))
-                    {
-                        ErrorManager.LogError(
-                            ErrorCodes.Report.Parameters_Invalid,
-                            ErrorSeverity.Error,
-                            $"שם פרמטר במיקום {i} הוא null או ריק");
-
-                        throw new ArgumentException($"Parameter name at position {i} is null or empty");
-                    }
-
-                    // הערך יכול להיות null - זה תקין
-                    object paramValue = paramArray[i + 1];
-
-                    // בדיקת סוג הפרמטר - יכול להיות enum של DbType או int
-                    DbType paramType;
-                    object dbTypeObject = paramArray[i + 2];
-
-                    if (dbTypeObject is DbType dbTypeEnum)
-                    {
-                        // אם זה כבר DbType, השתמש בו ישירות
-                        paramType = dbTypeEnum;
-                    }
-                    else
-                    {
-                        // אחרת, נסה להמיר למספר ואז ל-DbType
-                        try
-                        {
-                            int dbTypeValue = Convert.ToInt32(dbTypeObject);
-                            paramType = (DbType)dbTypeValue;
-                        }
-                        catch (Exception ex)
+                        if (i + 2 >= paramArray.Length)
                         {
                             ErrorManager.LogError(
-                                ErrorCodes.Report.Parameters_Type_Mismatch,
+                                ErrorCodes.Report.Parameters_Invalid,
                                 ErrorSeverity.Error,
-                                $"סוג הפרמטר במיקום {i + 2} אינו DbType תקין: {dbTypeObject}",
-                                ex);
-
-                            throw new ArgumentException($"Parameter type at position {i + 2} is not a valid DbType: {dbTypeObject}", ex);
+                                $"מערך הפרמטרים אינו בפורמט הנכון");
+                            throw new ArgumentException("Parameter array is not in the correct format");
                         }
-                    }
 
-                    // הוספת הפרמטר למילון התוצאה
-                    result.Add(paramName, new ParamValue(paramValue, paramType));
+                        // בדיקת שם פרמטר
+                        string paramName = paramArray[i]?.ToString();
+                        if (string.IsNullOrEmpty(paramName))
+                        {
+                            ErrorManager.LogError(
+                                ErrorCodes.Report.Parameters_Invalid,
+                                ErrorSeverity.Error,
+                                $"שם פרמטר במיקום {i} הוא null או ריק");
+                            throw new ArgumentException($"Parameter name at position {i} is null or empty");
+                        }
+
+                        // הערך יכול להיות null - זה תקין
+                        object paramValue = paramArray[i + 1];
+
+                        // בדיקת סוג הפרמטר - יכול להיות enum של DbType או int
+                        DbType paramType;
+                        object dbTypeObject = paramArray[i + 2];
+
+                        if (dbTypeObject is DbType dbTypeEnum)
+                        {
+                            // אם זה כבר DbType, השתמש בו ישירות
+                            paramType = dbTypeEnum;
+                        }
+                        else
+                        {
+                            // אחרת, נסה להמיר למספר ואז ל-DbType
+                            try
+                            {
+                                int dbTypeValue = Convert.ToInt32(dbTypeObject);
+                                paramType = (DbType)dbTypeValue;
+                            }
+                            catch (Exception ex)
+                            {
+                                ErrorManager.LogError(
+                                    ErrorCodes.Report.Parameters_Type_Mismatch,
+                                    ErrorSeverity.Error,
+                                    $"סוג הפרמטר במיקום {i + 2} אינו DbType תקין: {dbTypeObject}",
+                                    ex);
+                                throw new ArgumentException($"Parameter type at position {i + 2} is not a valid DbType: {dbTypeObject}", ex);
+                            }
+                        }
+
+                        // הוספת הפרמטר למילון התוצאה
+                        result.Add(paramName, new ParamValue(paramValue, paramType));
+                    }
                 }
+
+                // 2. קבלת רשימת הפרמטרים של הפרוצדורה ומילוי הפרמטרים החסרים
+                await FillMissingParameters(procName, result);
 
                 return result;
             }
@@ -243,8 +295,92 @@ namespace ReportGenerator.Core.Management
                     ErrorSeverity.Error,
                     "שגיאה בניתוח מערך הפרמטרים",
                     ex);
-
                 throw new ArgumentException("Error parsing parameters array", ex);
+            }
+        }
+
+        /// <summary>
+        /// מוסיף פרמטרים חסרים לרשימת הפרמטרים
+        /// </summary>
+        private async Task FillMissingParameters(string procName, Dictionary<string, ParamValue> parameters)
+        {
+            try
+            {
+                // קבלת רשימת הפרמטרים של הפרוצדורה
+                var procParams = await _dataAccess.GetProcedureParameters(procName);
+
+                // הוספת פרמטרים חסרים
+                foreach (var param in procParams)
+                {
+                    string paramName = param.Name;
+                    if (paramName.StartsWith("@"))
+                        paramName = paramName.Substring(1); // הסרת @ מתחילת השם
+
+                    // בדיקה אם הפרמטר כבר קיים
+                    if (!parameters.ContainsKey(paramName))
+                    {
+                        // יצירת ערך ברירת מחדל מתאים
+                        object defaultValue = GetDefaultValueForType(param.DataType);
+
+                        ErrorManager.LogInfo(
+                            "Parameter_Auto_Added",
+                            $"פרמטר {paramName} התווסף אוטומטית לפרוצדורה {procName} עם ערך ברירת מחדל");
+
+                        // הוספת הפרמטר עם ערך ברירת מחדל
+                        parameters.Add(paramName, new ParamValue(defaultValue, param.GetDbType()));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // רק רושמים שגיאה, אבל לא זורקים חריגה כדי לא לשבור את כל התהליך
+                ErrorManager.LogWarning(
+                    ErrorCodes.Report.Parameters_Missing,
+                    $"לא ניתן להוסיף פרמטרים חסרים לפרוצדורה {procName}: {ex.Message}",
+                    ex);
+            }
+        }
+
+        /// <summary>
+        /// מחזיר ערך ברירת מחדל לפי סוג נתונים
+        /// </summary>
+        private object GetDefaultValueForType(string dataType)
+        {
+            switch (dataType.ToLower())
+            {
+                case "int":
+                case "smallint":
+                case "tinyint":
+                case "bigint":
+                    return 0;
+
+                case "bit":
+                    return false;
+
+                case "decimal":
+                case "numeric":
+                case "money":
+                case "smallmoney":
+                case "float":
+                case "real":
+                    return 0.0;
+
+                case "datetime":
+                case "date":
+                case "datetime2":
+                case "smalldatetime":
+                    return null; // או DateTime.Now אם מעדיפים ערך לא-null
+
+                case "nvarchar":
+                case "varchar":
+                case "char":
+                case "nchar":
+                case "text":
+                case "ntext":
+                    return ""; // מחרוזת ריקה
+
+                default:
+                    return null;
             }
         }
 

@@ -20,22 +20,32 @@ class Program
             string reportName = "TrfbysugtsSummaryReport";
             OutputFormat outFormat = OutputFormat.PDF;
             var reportManager = new ReportManager(connectionString, templatePath);
+
             var parameters = new object[] {
-                  "mnt", 275, DbType.Int32,       // חודש מרץ
-                "isvkod",null , DbType.Int32 ,    // קוד ישוב ספציפי
-                "sugtslist","706", DbType.String 
-             };
-
-            // הרצת הדוח
-            var result = await reportManager.GenerateReport(reportName, outFormat, parameters);
-
-            // שמירת התוצאה לקובץ
-            if (outFormat == OutputFormat.PDF)
-                File.WriteAllBytes($"{reportName}.pdf", result);
-            else
-                File.WriteAllBytes($"{reportName}.xlsx", result);
-
-            Console.WriteLine("Report generated successfully!");
+                "mnt", 275, DbType.Int32
+                //",isvme", null, DbType.Int32,
+                //"isvad", null, DbType.Int32,
+                //"sughskod", null, DbType.Int32,
+                //"midgam", null, DbType.Boolean,
+                //"bysughs", null, DbType.Boolean,
+                //"hanhkkrts", null, DbType.Boolean
+            };
+           // var parameters = new object[] {
+              //    "mnt", 277, DbType.Int32//,       // חודש מרץ
+               // "isvkod",null , DbType.Int32 ,    // קוד ישוב ספציפי
+              //  "sugtslist","706", DbType.String
+           //  };
+            //var parameters = new object[] {
+            //    "byyr", 0, DbType.Int32,
+            //    "thisyr", 2021, DbType.Int32,
+            //    "frstdt", DateTime.Parse("2021-01-01"), DbType.DateTime,
+            //    "lastdate", DateTime.Parse("2021-02-28"), DbType.DateTime,
+            //    "sugts", 1010, DbType.Int32,
+            //    "sugtsname", null, DbType.String,  // פרמטר נוסף לתצוגה בדוח
+            //    "hanmas", null, DbType.Int32,
+            //    "isvkod", null, DbType.Int32
+            //};
+            reportManager.GenerateReportAsync(reportName, outFormat, parameters);
         
             Console.ReadKey();
         }
@@ -51,26 +61,4 @@ class Program
         }
     }
 
-    static async Task TestReport(ReportManager manager, string reportName, object[] parameters)
-    {
-        try
-        {
-            // בדיקת PDF
-            Console.WriteLine("\nTesting PDF Generation...");
-            var pdfResult = await manager.GenerateReport(reportName, OutputFormat.PDF, parameters);
-            await File.WriteAllBytesAsync("test_report.pdf", pdfResult);
-            Console.WriteLine($"PDF generated successfully. Size: {pdfResult.Length:N0} bytes");
-
-            // בדיקת Excel
-            Console.WriteLine("\nTesting Excel Generation...");
-            var excelResult = await manager.GenerateReport(reportName, OutputFormat.Excel, parameters);
-            await File.WriteAllBytesAsync("test_report.xlsx", excelResult);
-            Console.WriteLine($"Excel generated successfully. Size: {excelResult.Length:N0} bytes");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error testing report: {ex.Message}");
-            throw;
-        }
-    }
-}
+ }
