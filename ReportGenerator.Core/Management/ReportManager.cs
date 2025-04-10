@@ -306,39 +306,94 @@ namespace ReportGenerator.Core.Management
         {
             try
             {
+                // רישום המצב ההתחלתי
+                //Console.WriteLine($"FillMissingParameters for {procName}, starting with {parameters.Count} parameters:");
+                foreach (var param in parameters)
+                {
+                    Console.WriteLine($"  {param.Key} = {param.Value.Value ?? "NULL"} ({param.Value.Type})");
+                }
+
                 // קבלת רשימת הפרמטרים של הפרוצדורה
                 var procParams = await _dataAccess.GetProcedureParameters(procName);
 
                 // הוספת פרמטרים חסרים
+                int addedCount = 0;
                 foreach (var param in procParams)
                 {
-                    string paramName = param.Name;
-                    if (paramName.StartsWith("@"))
-                        paramName = paramName.Substring(1); // הסרת @ מתחילת השם
+                    // בדיקה אם הפרמטר כבר קיים (תוך התעלמות מרישיות)
+                    bool exists = parameters.Keys.Any(k =>
+                        string.Equals(k, param.Name, StringComparison.OrdinalIgnoreCase));
 
-                    // בדיקה אם הפרמטר כבר קיים
-                    if (!parameters.ContainsKey(paramName))
+                    if (!exists)
                     {
-                        // יצירת ערך ברירת מחדל מתאים
-                        object defaultValue = GetDefaultValueForType(param.DataType);
+                        // יצירת ערך ברירת מחדל אם צריך
+                        object defaultValue = null;
 
-                        ErrorManager.LogInfo(
-                            "Parameter_Auto_Added",
-                            $"פרמטר {paramName} התווסף אוטומטית לפרוצדורה {procName} עם ערך ברירת מחדל");
+                        // אם מדובר במחרוזת, ערך ברירת המחדל יהיה null (מה שמתאים לפרמטרים אופציונליים)
+                        if (param.DataType.Contains("varchar") || param.DataType.Contains("char"))
+                        {
+                            defaultValue = null;
+                        }
+                        else
+                        {
+                            // עבור שאר הטיפוסים, נשתמש במתודה הקיימת
+                            defaultValue = GetDefaultValueForType(param.DataType);
 
-                        // הוספת הפרמטר עם ערך ברירת מחדל
-                        parameters.Add(paramName, new ParamValue(defaultValue, param.GetDbType()));
+                            // אם פרמטר מוגדר כ-nullable, אפשר לשלוח null במקום 0
+                            if (param.IsNullable &&
+                                (param.DataType.Contains("int") || param.DataType.Contains("bit")))
+                            {
+                                defaultValue = null;
+                            }
+                        }
+
+                        // בחירת DbType המתאים
+                        DbType dbType = GetDbTypeForSqlType(param.DataType);
+
+                        // הוספת הפרמטר
+                        parameters.Add(param.Name, new ParamValue(defaultValue, dbType));
+                        addedCount++;
+
+                        //Console.WriteLine($"Added missing parameter: {param.Name} = {defaultValue ?? "NULL"} ({dbType})");
                     }
                 }
+
+               // Console.WriteLine($"Added {addedCount} missing parameters");
             }
             catch (Exception ex)
             {
-                // רק רושמים שגיאה, אבל לא זורקים חריגה כדי לא לשבור את כל התהליך
+                //Console.WriteLine($"Error in FillMissingParameters: {ex.Message}");
                 ErrorManager.LogWarning(
                     ErrorCodes.Report.Parameters_Missing,
                     $"לא ניתן להוסיף פרמטרים חסרים לפרוצדורה {procName}: {ex.Message}",
                     ex);
             }
+        }
+
+        // פונקצית עזר חדשה לקביעת DbType המתאים
+        private DbType GetDbTypeForSqlType(string sqlType)
+        {
+            sqlType = sqlType.ToLowerInvariant();
+
+            if (sqlType.Contains("int"))
+                return DbType.Int32;
+            if (sqlType.Contains("bigint"))
+                return DbType.Int64;
+            if (sqlType.Contains("bit"))
+                return DbType.Boolean;
+            if (sqlType.Contains("decimal") || sqlType.Contains("numeric") || sqlType.Contains("money"))
+                return DbType.Decimal;
+            if (sqlType.Contains("float") || sqlType.Contains("real"))
+                return DbType.Double;
+            if (sqlType.Contains("date") || sqlType.Contains("time"))
+                return DbType.DateTime;
+            if (sqlType.Contains("nvarchar") || sqlType.Contains("nchar") || sqlType.Contains("ntext"))
+                return DbType.String;
+            if (sqlType.Contains("varchar") || sqlType.Contains("char") || sqlType.Contains("text"))
+                return DbType.AnsiString;
+
+            // ברירת מחדל
+            return DbType.String;
         }
 
         /// <summary>

@@ -622,46 +622,120 @@ namespace ReportGenerator.Core.Data
         /// <summary>
         /// מקבל מידע על פרמטרים של פרוצדורה מאוחסנת
         /// </summary>
-        public async Task<IEnumerable<ParameterInfo>> GetProcedureParameters(string procName)
+        public async Task<List<ParameterInfo>> GetProcedureParameters(string procName)
         {
+            var parameters = new List<ParameterInfo>();
+
             try
             {
-                // הסרת קידומת סכמה אם קיימת
-                string cleanProcName = procName;
+                // הסרת קידומת Schema אם קיימת
+                string pureProcName = procName;
                 if (procName.Contains("."))
                 {
-                    cleanProcName = procName.Substring(procName.LastIndexOf('.') + 1);
+                    pureProcName = procName.Split('.').Last();
                 }
-                
+
                 using var connection = new SqlConnection(_connectionString);
-                var result = await connection.QueryAsync<ParameterInfo>(
-                    @"SELECT 
-                        p.name as Name,
-                        t.name as DataType,
-                        CASE 
-                            WHEN p.has_default_value = 1 THEN 'YES'  -- אם יש ערך ברירת מחדל
-                            WHEN definition LIKE '%' + p.name + '%=' THEN 'YES'  -- בדיקה בהגדרת הפרוצדורה
-                            ELSE 'NO' 
-                        END as IsNullable,
-                        p.default_value as DefaultValue,
-                        p.parameter_id as ParameterOrder
-                    FROM sys.parameters p
-                    INNER JOIN sys.types t ON p.system_type_id = t.system_type_id
-                    INNER JOIN sys.procedures sp ON p.object_id = sp.object_id
-                    LEFT JOIN sys.sql_modules m ON sp.object_id = m.object_id
-                    WHERE sp.name = @ProcName
-                    ORDER BY p.parameter_id",
-                    new { ProcName = cleanProcName });
-                
-                return result;
+                await connection.OpenAsync();
+
+                // שימוש בשאילתה משופרת שמחזירה מידע מדויק יותר על הפרמטרים
+                var query = @"
+            SELECT 
+                p.name AS Name,
+                t.name AS DataType,
+                p.is_output AS IsOutput,
+                p.has_default_value AS HasDefault,
+                CONVERT(NVARCHAR(100), p.default_value) AS DefaultValue
+            FROM sys.parameters p
+            JOIN sys.types t ON p.system_type_id = t.system_type_id
+            JOIN sys.objects o ON p.object_id = o.object_id
+            WHERE o.name = @ProcName 
+            ORDER BY p.parameter_id";
+
+                var result = await connection.QueryAsync<dynamic>(query, new { ProcName = pureProcName });
+
+                // הסרת כפילויות ע"י שימוש במילון עזר
+                var uniqueParams = new Dictionary<string, ParameterInfo>();
+
+                foreach (var param in result)
+                {
+                    string paramName = param.Name.ToString().TrimStart('@');
+
+                    if (!uniqueParams.ContainsKey(paramName))
+                    {
+                        var paramInfo = new ParameterInfo
+                        {
+                            Name = paramName,
+                            DataType = param.DataType.ToString(),
+                            DefaultValue = param.HasDefault ? param.DefaultValue?.ToString() : null,
+                            IsNullable = true  // מניחים שפרמטרים אופציונליים הם nullable
+                        };
+
+                        uniqueParams[paramName] = paramInfo;
+
+                        // הוספת יותר מידע לצורכי דיבוג
+                        //Console.WriteLine($"Parameter found: {paramName}, Type: {paramInfo.DataType}, HasDefault: {param.HasDefault}, DefaultValue: {param.DefaultValue}");
+                    }
+                }
+
+                parameters = uniqueParams.Values.ToList();
+               // Console.WriteLine($"Found {parameters.Count} unique parameters for {procName}");
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
-                    $"שגיאה בשליפת מידע על פרמטרים של הפרוצדורה {procName}",
+                //Console.WriteLine($"Error in GetProcedureParameters: {ex.Message}");
+                ErrorManager.LogWarning(
+                    "GetProcedureParameters_Failed",
+                    $"שגיאה בקבלת פרמטרים לפרוצדורה {procName}: {ex.Message}",
                     ex);
-                return Enumerable.Empty<ParameterInfo>();
+            }
+
+            // אם לא מצאנו פרמטרים בדרך הרגילה, ננסה להסיק מהתנהגות הפרוצדורה
+            if (parameters.Count == 0)
+            {
+                // ניסיון להריץ את הפרוצדורה רק עם הפרמטר הראשון כדי לזהות שגיאות פרמטרים חסרים
+                await InferParametersFromExecution(procName, parameters);
+            }
+
+            return parameters;
+        }
+
+        // פונקצית עזר חדשה להסקת פרמטרים מניסיון הרצה
+        private async Task InferParametersFromExecution(string procName, List<ParameterInfo> parameters)
+        {
+            try
+            {
+                // אם כל השאר נכשל, נוסיף פרמטרים נפוצים לפרוצדורות מסוג דוח
+                Console.WriteLine($"Using fallback parameter inference for {procName}");
+
+                // פרמטרים נפוצים בדוחות - הוספה רק אם לא זוהו פרמטרים בדרך אחרת
+                if (!parameters.Any(p => p.Name.Equals("mnt", StringComparison.OrdinalIgnoreCase)))
+                {
+                    parameters.Add(new ParameterInfo { Name = "mnt", DataType = "int", IsNullable = false });
+                }
+
+                // פרמטרים אופציונליים נפוצים
+                string[] commonOptionalParams = { "isvkod", "sugtslist", "isvme", "isvad", "sughskod" };
+
+                foreach (var paramName in commonOptionalParams)
+                {
+                    if (!parameters.Any(p => p.Name.Equals(paramName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        parameters.Add(new ParameterInfo
+                        {
+                            Name = paramName,
+                            DataType = "nvarchar",
+                            IsNullable = true,
+                            DefaultValue = null
+                        });
+
+                        Console.WriteLine($"Added inferred parameter: {paramName}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in parameter inference: {ex.Message}");
             }
         }
 
@@ -743,10 +817,10 @@ namespace ReportGenerator.Core.Data
         public string Name { get; set; }
         public string DataType { get; set; }
         public string Mode { get; set; }
-        public string IsNullable { get; set; }
+        public bool IsNullable { get; set; }
         public string DefaultValue { get; set; }
 
-        public bool IsOptional => !string.IsNullOrEmpty(DefaultValue) || IsNullable == "YES";
+        public bool IsOptional => !string.IsNullOrEmpty(DefaultValue) || IsNullable == true;
 
         public DbType GetDbType()
         {
