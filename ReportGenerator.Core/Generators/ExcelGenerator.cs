@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
-using System.IO;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using ReportGenerator.Core.Interfaces;
 
 namespace ReportGenerator.Core.Generators
 {
-    public class ExcelGenerator
+    public class ExcelGenerator : IExcelGenerator
     {
         private readonly Dictionary<string, string> _columnMappings;
         private readonly List<string> _hiddenColumns = new List<string> { "IsSummary" };
@@ -21,64 +21,6 @@ namespace ReportGenerator.Core.Generators
         {
             _columnMappings = columnMappings ?? new Dictionary<string, string>();
         }
-
-        /// <summary>
-        /// יוצר קובץ אקסל מטבלת נתונים
-        /// </summary>
-        /// <param name="data">טבלת נתונים מקורית</param>
-        /// <returns>מערך בייטים של קובץ אקסל</returns>
-        //public byte[] Generate(DataTable data)
-        //{
-        //    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-        //    using (var package = new ExcelPackage())
-        //    {
-        //        var worksheet = package.Workbook.Worksheets.Add("Report");
-
-        //        // הגדרת כיווניות לעברית
-        //        worksheet.View.RightToLeft = true;
-
-        //        // הוספת כותרות בעברית
-        //        for (int i = 0; i < data.Columns.Count; i++)
-        //        {
-        //            string columnName = data.Columns[i].ColumnName;
-        //            string hebrewName = GetHebrewColumnName(columnName);
-
-        //            worksheet.Cells[1, i + 1].Value = hebrewName;
-        //            worksheet.Cells[1, i + 1].Style.Font.Bold = true;
-        //            worksheet.Cells[1, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-        //            worksheet.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-        //        }
-
-        //        // הוספת נתונים
-        //        for (int row = 0; row < data.Rows.Count; row++)
-        //        {
-        //            for (int col = 0; col < data.Columns.Count; col++)
-        //            {
-        //                var cell = worksheet.Cells[row + 2, col + 1];
-        //                var value = data.Rows[row][col];
-
-        //                cell.Value = value;
-
-        //                // התאמת פורמט לסוג הנתונים
-        //                if (value is decimal || value is double || value is float)
-        //                {
-        //                    cell.Style.Numberformat.Format = "#,##0.00";
-        //                    cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
-        //                }
-        //                else if (value is DateTime)
-        //                {
-        //                    cell.Style.Numberformat.Format = "dd/MM/yyyy";
-        //                }
-        //            }
-        //        }
-
-        //        // עיצוב אוטומטי של רוחב עמודות
-        //        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
-
-        //        return package.GetAsByteArray();
-        //    }
-        //}
 
         /// <summary>
         /// יוצר קובץ אקסל ממספר טבלאות נתונים
@@ -180,16 +122,6 @@ namespace ReportGenerator.Core.Generators
                                 }
                             }
                         }
-                        // בדיקה אם זו שורת סיכום לפי שדה hesder
-                        //else if (data.Columns.Contains("hesder") && data.Rows[row]["hesder"] != DBNull.Value)
-                        //{
-                        //    var hesderValue = data.Rows[row]["hesder"];
-
-                        //    if (hesderValue is int intValue && intValue == -1)
-                        //        isSummaryRow = true;
-                        //    else if (int.TryParse(hesderValue.ToString(), out int parsedValue) && parsedValue == -1)
-                        //        isSummaryRow = true;
-                        //}
 
                         // הוספת התאים (רק לעמודות גלויות)
                         for (int colIdx = 0; colIdx < data.Columns.Count; colIdx++)
