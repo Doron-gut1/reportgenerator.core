@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ReportGenerator.Core.Configuration;
 using ReportGenerator.Core.Data;
 using ReportGenerator.Core.Errors;
@@ -25,9 +26,12 @@ namespace ReportGenerator.Core.DependencyInjection
             IConfiguration configuration)
         {
             // קריאת הגדרות מהקונפיגורציה
-            services.Configure<ReportSettings>(configuration.GetSection("ReportSettings"));
+            services.Configure<ReportSettings>(options => 
+                configuration.GetSection("ReportSettings").Bind(options));
 
             // רישום שירותים
+            services.AddSingleton<IErrorLogger, DbErrorLogger>();
+            services.AddSingleton<IErrorManager, ErrorManager>();
             services.AddTransient<IDataAccess, DataAccess>();
             services.AddTransient<ITemplateManager, HtmlTemplateManager>();
             services.AddTransient<ITemplateProcessor, HtmlTemplateProcessor>();
@@ -35,7 +39,6 @@ namespace ReportGenerator.Core.DependencyInjection
             services.AddTransient<IPdfGenerator, HtmlBasedPdfGenerator>();
             services.AddTransient<IExcelGenerator, ExcelGenerator>();
             services.AddTransient<IReportGenerator, ReportManager>();
-            services.AddSingleton<IErrorLogger, DbErrorLogger>();
 
             return services;
         }
@@ -63,6 +66,8 @@ namespace ReportGenerator.Core.DependencyInjection
             });
 
             // רישום שירותים
+            services.AddSingleton<IErrorLogger, DbErrorLogger>();
+            services.AddSingleton<IErrorManager, ErrorManager>();
             services.AddTransient<IDataAccess, DataAccess>();
             services.AddTransient<ITemplateManager, HtmlTemplateManager>();
             services.AddTransient<ITemplateProcessor, HtmlTemplateProcessor>();
@@ -70,7 +75,6 @@ namespace ReportGenerator.Core.DependencyInjection
             services.AddTransient<IPdfGenerator, HtmlBasedPdfGenerator>();
             services.AddTransient<IExcelGenerator, ExcelGenerator>();
             services.AddTransient<IReportGenerator, ReportManager>();
-            services.AddSingleton<IErrorLogger, DbErrorLogger>();
 
             return services;
         }
