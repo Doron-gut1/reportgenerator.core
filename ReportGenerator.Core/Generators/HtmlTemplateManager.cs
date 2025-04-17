@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using ReportGenerator.Core.Errors;
 using ReportGenerator.Core.Interfaces;
@@ -15,17 +14,21 @@ namespace ReportGenerator.Core.Generators
     public class HtmlTemplateManager : ITemplateManager
     {
         private readonly string _templatesFolder;
+        private readonly IErrorManager _errorManager;
 
         /// <summary>
         /// יוצר מופע חדש של מנהל התבניות
         /// </summary>
         /// <param name="templatesFolder">נתיב לתיקיית התבניות</param>
-        public HtmlTemplateManager(string templatesFolder)
+        /// <param name="errorManager">מנהל שגיאות</param>
+        public HtmlTemplateManager(string templatesFolder, IErrorManager errorManager)
         {
+            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
+
             if (string.IsNullOrEmpty(templatesFolder))
             {
                 var error = new ArgumentNullException(nameof(templatesFolder));
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCode.Template_Invalid_Format,
                     ErrorSeverity.Critical,
                     "נתיב תיקיית תבניות לא יכול להיות ריק",
@@ -41,14 +44,14 @@ namespace ReportGenerator.Core.Generators
                 if (!Directory.Exists(_templatesFolder))
                 {
                     Directory.CreateDirectory(_templatesFolder);
-                    ErrorManager.LogInfo(
-                        "Template_Directory_Created",
+                    _errorManager.LogInfo(
+                        ErrorCode.General_Error,
                         $"נוצרה תיקייה חדשה לתבניות: {_templatesFolder}");
                 }
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCode.Template_Not_Found,
                     ErrorSeverity.Critical,
                     $"לא ניתן ליצור את תיקיית התבניות: {_templatesFolder}",
@@ -71,7 +74,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCode.Template_Not_Found,
                     ErrorSeverity.Error,
                     $"שגיאה בבדיקת קיום תבנית {templateName}",
@@ -93,7 +96,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCode.Template_Not_Found,
                     ErrorSeverity.Error,
                     $"שגיאה בקבלת רשימת תבניות זמינות מהתיקייה {_templatesFolder}",
@@ -116,7 +119,7 @@ namespace ReportGenerator.Core.Generators
                 if (!File.Exists(fullPath))
                 {
                     var error = new FileNotFoundException($"Template '{templateName}' not found at {fullPath}");
-                    ErrorManager.LogError(
+                    _errorManager.LogError(
                         ErrorCode.Template_Not_Found,
                         ErrorSeverity.Critical,
                         $"תבנית '{templateName}' לא נמצאה בנתיב {fullPath}",
@@ -129,7 +132,7 @@ namespace ReportGenerator.Core.Generators
                 
                 if (string.IsNullOrWhiteSpace(templateContent))
                 {
-                    ErrorManager.LogWarning(
+                    _errorManager.LogWarning(
                         ErrorCode.Template_Invalid_Format,
                         $"תבנית '{templateName}' ריקה או מכילה רווחים בלבד",
                         reportName: templateName);
@@ -145,7 +148,7 @@ namespace ReportGenerator.Core.Generators
             catch (Exception ex)
             {
                 var error = new Exception($"Failed to read template file {fullPath}", ex);
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCode.Template_Invalid_Format,
                     ErrorSeverity.Critical,
                     $"שגיאה בקריאת קובץ תבנית {templateName}",
@@ -167,13 +170,13 @@ namespace ReportGenerator.Core.Generators
             try
             {
                 await File.WriteAllTextAsync(fullPath, content);
-                ErrorManager.LogInfo(
-                    "Template_Saved",
+                _errorManager.LogInfo(
+                    ErrorCode.General_Error,
                     $"תבנית {templateName} נשמרה בהצלחה");
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCode.Template_Processing_Failed,
                     ErrorSeverity.Error,
                     $"שגיאה בשמירת תבנית {templateName}",
@@ -193,7 +196,7 @@ namespace ReportGenerator.Core.Generators
             if (string.IsNullOrEmpty(templateName))
             {
                 var error = new ArgumentException("Template name cannot be null or empty", nameof(templateName));
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCode.Template_Invalid_Format,
                     ErrorSeverity.Error,
                     "שם תבנית לא יכול להיות ריק",
