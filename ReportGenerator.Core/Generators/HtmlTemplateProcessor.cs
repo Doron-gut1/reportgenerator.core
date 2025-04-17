@@ -7,24 +7,28 @@ using System.Text;
 using System.Text.RegularExpressions;
 using HandlebarsDotNet;
 using ReportGenerator.Core.Errors;
+using ReportGenerator.Core.Interfaces;
 
 namespace ReportGenerator.Core.Generators
 {
     /// <summary>
     /// מעבד תבניות HTML - אחראי על עיבוד תבניות והחלפת פלייסהולדרים בערכים אמיתיים
     /// </summary>
-    public class HtmlTemplateProcessor
+    public class HtmlTemplateProcessor : ITemplateProcessor
     {
         private readonly Dictionary<string, string> _columnMappings;
         private readonly IHandlebars _handlebars;
+        private readonly IErrorManager _errorManager;
 
         /// <summary>
         /// יוצר מופע חדש של מעבד תבניות
         /// </summary>
         /// <param name="columnMappings">מילון המיפויים בין שמות עמודות באנגלית לעברית</param>
-        public HtmlTemplateProcessor(Dictionary<string, string> columnMappings)
+        /// <param name="errorManager">מנהל שגיאות</param>
+        public HtmlTemplateProcessor(Dictionary<string, string> columnMappings, IErrorManager errorManager)
         {
             _columnMappings = columnMappings ?? new Dictionary<string, string>();
+            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
 
             // אתחול מנוע Handlebars
             _handlebars = Handlebars.Create();
@@ -68,7 +72,7 @@ namespace ReportGenerator.Core.Generators
             {
                 if (string.IsNullOrEmpty(template))
                 {
-                    ErrorManager.LogError(
+                    _errorManager.LogError(
                         ErrorCodes.Template.Invalid_Format,
                         ErrorSeverity.Critical,
                         "תבנית HTML לא יכולה להיות ריקה");
@@ -110,7 +114,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex) when (!(ex is ArgumentException))
             {
-                ErrorManager.LogError(
+                _errorManager.LogError(
                     ErrorCodes.Template.Processing_Failed,
                     ErrorSeverity.Critical,
                     "שגיאה בעיבוד תבנית HTML",
@@ -144,7 +148,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Processing_Failed,
                     "שגיאה בחיפוש שורת סיכום",
                     ex);
@@ -180,7 +184,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Processing_Failed,
                     "שגיאה בהשגת טבלת ברירת מחדל",
                     ex);
@@ -210,7 +214,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Processing_Failed,
                     "שגיאה בעיבוד פלייסהולדרים פשוטים",
                     ex);
@@ -266,7 +270,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Condition_Invalid,
                     $"שגיאה בעיבוד תנאים: {ex.Message}",
                     ex);
@@ -298,7 +302,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Condition_Invalid,
                     $"שגיאה בעיבוד תנאים גלובליים: {ex.Message}",
                     ex);
@@ -350,7 +354,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Condition_Invalid,
                     $"שגיאה בעיבוד תנאים בקטע: {ex.Message}",
                     ex);
@@ -395,7 +399,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Missing_Placeholder,
                     $"שגיאה בקבלת שם עברי לעמודה {columnName}",
                     ex);
@@ -424,7 +428,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Processing_Failed,
                     "שגיאה בעיבוד כותרות",
                     ex);
@@ -459,7 +463,7 @@ namespace ReportGenerator.Core.Generators
                     if (keyToUse == null)
                     {
                         // אם אין נתונים, להציג הודעה
-                        ErrorManager.LogWarning(
+                        _errorManager.LogWarning(
                             ErrorCodes.Template.Table_Row_Missing,
                             $"לא נמצאו נתונים לטבלה: {tableName}");
 
@@ -506,7 +510,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
+                _errorManager.LogNormalError(
                     ErrorCodes.Template.Table_Row_Invalid,
                     "שגיאה בעיבוד טבלאות דינמיות",
                     ex);
@@ -529,7 +533,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Processing_Failed,
                     "שגיאה בעיבוד פלייסהולדרים של מספרי עמודים",
                     ex);
@@ -628,7 +632,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
+                _errorManager.LogWarning(
                     ErrorCodes.Template.Table_Row_Missing,
                     $"שגיאה במציאת מפתח טבלה {requestedName}",
                     ex);
