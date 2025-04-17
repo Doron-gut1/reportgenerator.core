@@ -1,8 +1,10 @@
-﻿using ReportGenerator.Core.Data.Models;
+using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
+using ReportGenerator.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace ReportGenerator.Core.Generators
@@ -10,10 +12,10 @@ namespace ReportGenerator.Core.Generators
     /// <summary>
     /// יוצר PDF מבוסס תבניות HTML
     /// </summary>
-    public class HtmlBasedPdfGenerator
+    public class HtmlBasedPdfGenerator : IPdfGenerator
     {
-        private readonly HtmlTemplateManager _templateManager;
-        private readonly HtmlTemplateProcessor _templateProcessor;
+        private readonly ITemplateManager _templateManager;
+        private readonly ITemplateProcessor _templateProcessor;
         private readonly IHtmlToPdfConverter _pdfConverter;
 
         /// <summary>
@@ -23,8 +25,8 @@ namespace ReportGenerator.Core.Generators
         /// <param name="templateProcessor">מעבד תבניות</param>
         /// <param name="pdfConverter">ממיר HTML ל-PDF</param>
         public HtmlBasedPdfGenerator(
-            HtmlTemplateManager templateManager,
-            HtmlTemplateProcessor templateProcessor,
+            ITemplateManager templateManager,
+            ITemplateProcessor templateProcessor,
             IHtmlToPdfConverter pdfConverter)
         {
             _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
@@ -101,7 +103,7 @@ namespace ReportGenerator.Core.Generators
                 if (ex.Message.Contains("Template") || ex.Message.Contains("תבנית"))
                 {
                     ErrorManager.LogError(
-                        ErrorCodes.Template.Not_Found,
+                        ErrorCode.Template_Not_Found,
                         ErrorSeverity.Critical,
                         $"שגיאה בטעינת תבנית {templateName}",
                         ex,
@@ -110,7 +112,7 @@ namespace ReportGenerator.Core.Generators
                 else if (ex.Message.Contains("Chrome") || ex.Message.Contains("Browser"))
                 {
                     ErrorManager.LogError(
-                        ErrorCodes.PDF.Chrome_Not_Found,
+                        ErrorCode.PDF_Chrome_Not_Found,
                         ErrorSeverity.Critical,
                         "שגיאה בטעינת דפדפן Chrome להמרת PDF",
                         ex,
@@ -119,7 +121,7 @@ namespace ReportGenerator.Core.Generators
                 else
                 {
                     ErrorManager.LogError(
-                        ErrorCodes.PDF.Generation_Failed,
+                        ErrorCode.PDF_Generation_Failed,
                         ErrorSeverity.Critical,
                         $"שגיאה כללית ביצירת PDF עבור דוח {templateName}",
                         ex,
