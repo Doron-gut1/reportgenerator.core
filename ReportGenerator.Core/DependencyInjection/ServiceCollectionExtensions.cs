@@ -25,7 +25,8 @@ namespace ReportGenerator.Core.DependencyInjection
             IConfiguration configuration)
         {
             // קריאת הגדרות מהקונפיגורציה
-            services.Configure<ReportSettings>(configuration.GetSection("ReportSettings"));
+            services.Configure<ReportSettings>(options => 
+                configuration.GetSection("ReportSettings").Bind(options));
 
             // רישום שירותים
             services.AddTransient<IDataAccess, DataAccess>();
