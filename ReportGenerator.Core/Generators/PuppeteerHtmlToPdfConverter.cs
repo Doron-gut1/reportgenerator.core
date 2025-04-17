@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;
 using ReportGenerator.Core.Errors;
+using ReportGenerator.Core.Interfaces;
 
 namespace ReportGenerator.Core.Generators
 {
@@ -16,13 +17,16 @@ namespace ReportGenerator.Core.Generators
         private readonly string _chromePath;
         private readonly bool _useHeadless = true;
         private readonly PdfOptions _defaultPdfOptions;
+        private readonly IErrorManager _errorManager;
 
         /// <summary>
         /// יוצר מופע חדש של ממיר HTML ל-PDF
         /// </summary>
+        /// <param name="errorManager">מנהל שגיאות</param>
         /// <param name="chromePath">נתיב לתוכנת Chrome (אופציונלי)</param>
-        public PuppeteerHtmlToPdfConverter(string chromePath = null)
+        public PuppeteerHtmlToPdfConverter(IErrorManager errorManager, string chromePath = null)
         {
+            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
             _chromePath = chromePath;
 
             // יצירת הגדרות ברירת מחדל עבור PDF
@@ -51,8 +55,8 @@ namespace ReportGenerator.Core.Generators
         {
             if (string.IsNullOrEmpty(html))
             {
-                ErrorManager.LogError(
-                    ErrorCodes.PDF.Html_Conversion_Failed,
+                _errorManager.LogError(
+                    ErrorCode.PDF_Html_Conversion_Failed,
                     ErrorSeverity.Critical,
                     "תוכן HTML ריק או null נשלח להמרה");
                 throw new ArgumentException("HTML content cannot be null or empty");
@@ -74,8 +78,8 @@ namespace ReportGenerator.Core.Generators
                     var browserFetcher = new BrowserFetcher();
                     await browserFetcher.DownloadAsync();
 
-                    ErrorManager.LogInfo(
-                        "Chrome_Downloaded",
+                    _errorManager.LogInfo(
+                        ErrorCode.General_Error,
                         "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
                 }
 
@@ -90,16 +94,16 @@ namespace ReportGenerator.Core.Generators
                 var pdfOptions = options as PdfOptions ?? _defaultPdfOptions;
                 var pdfBytes = await page.PdfDataAsync(pdfOptions);
 
-                ErrorManager.LogInfo(
-                    "PDF_Conversion_Success",
+                _errorManager.LogInfo(
+                    ErrorCode.General_Error,
                     $"המרת HTML ל-PDF הושלמה בהצלחה. גודל: {pdfBytes.Length / 1024:N0} KB");
 
                 return pdfBytes;
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.PDF.Chrome_Not_Found,
+                _errorManager.LogError(
+                    ErrorCode.PDF_Chrome_Not_Found,
                     ErrorSeverity.Critical,
                     "שגיאה בהפעלת Chrome. וודא שהתוכנה מותקנת או שהנתיב תקין",
                     ex);
@@ -107,8 +111,8 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.PDF.Html_Conversion_Failed,
+                _errorManager.LogError(
+                    ErrorCode.PDF_Html_Conversion_Failed,
                     ErrorSeverity.Critical,
                     "שגיאה בהמרת HTML ל-PDF",
                     ex);
@@ -129,8 +133,8 @@ namespace ReportGenerator.Core.Generators
             {
                 if (!File.Exists(htmlFilePath))
                 {
-                    ErrorManager.LogError(
-                        ErrorCodes.PDF.Html_Conversion_Failed,
+                    _errorManager.LogError(
+                        ErrorCode.PDF_Html_Conversion_Failed,
                         ErrorSeverity.Critical,
                         $"קובץ HTML לא קיים: {htmlFilePath}");
                     throw new FileNotFoundException($"HTML file not found: {htmlFilePath}");
@@ -146,8 +150,8 @@ namespace ReportGenerator.Core.Generators
                 if (!string.IsNullOrEmpty(pdfFilePath))
                 {
                     await File.WriteAllBytesAsync(pdfFilePath, pdfBytes);
-                    ErrorManager.LogInfo(
-                        "PDF_File_Saved",
+                    _errorManager.LogInfo(
+                        ErrorCode.General_Error,
                         $"קובץ PDF נשמר: {pdfFilePath}");
                 }
 
@@ -160,8 +164,8 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.PDF.Html_Conversion_Failed,
+                _errorManager.LogError(
+                    ErrorCode.PDF_Html_Conversion_Failed,
                     ErrorSeverity.Critical,
                     $"שגיאה בהמרת קובץ HTML ל-PDF: {htmlFilePath}",
                     ex);
@@ -225,8 +229,8 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.PDF.Html_Conversion_Failed,
+                _errorManager.LogError(
+                    ErrorCode.PDF_Html_Conversion_Failed,
                     ErrorSeverity.Error,
                     "שגיאה בהמרת HTML עם כותרות מותאמות ל-PDF",
                     ex);
@@ -265,8 +269,8 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
-                    ErrorCodes.PDF.Html_Conversion_Failed,
+                _errorManager.LogWarning(
+                    ErrorCode.PDF_Html_Conversion_Failed,
                     "שגיאה בחילוץ כותרת עליונה מ-HTML",
                     ex);
 
@@ -303,8 +307,8 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
-                    ErrorCodes.PDF.Html_Conversion_Failed,
+                _errorManager.LogWarning(
+                    ErrorCode.PDF_Html_Conversion_Failed,
                     "שגיאה בחילוץ כותרת תחתונה מ-HTML",
                     ex);
 
