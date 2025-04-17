@@ -1,72 +1,54 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Data;
 using System.Collections.Generic;
+using Microsoft.Extensions.Options;
+using ReportGenerator.Core.Configuration;
 using ReportGenerator.Core.Data;
 using ReportGenerator.Core.Data.Models;
-using ReportGenerator.Core.Generators;
-using ReportGenerator.Core.Management.Enums;
 using ReportGenerator.Core.Errors;
+using ReportGenerator.Core.Interfaces;
+using ReportGenerator.Core.Management.Enums;
 
 namespace ReportGenerator.Core.Management
 {
     /// <summary>
     /// מנהל הדוחות הראשי - מקשר בין כל רכיבי המערכת
     /// </summary>
-    public class ReportManager
+    public class ReportManager : IReportGenerator
     {
-        private readonly DataAccess _dataAccess;
-        private readonly HtmlTemplateManager _templateManager;
-        private HtmlTemplateProcessor _templateProcessor;
-        private readonly HtmlBasedPdfGenerator _htmlPdfGenerator;
-        private ExcelGenerator _excelGenerator;
+        private readonly IDataAccess _dataAccess;
+        private readonly ITemplateManager _templateManager;
+        private readonly ITemplateProcessor _templateProcessor;
+        private readonly IPdfGenerator _pdfGenerator;
+        private readonly IExcelGenerator _excelGenerator;
+        private readonly IErrorManager _errorManager;
+        private readonly ReportSettings _settings;
 
         /// <summary>
         /// יוצר מופע חדש של מנהל הדוחות
         /// </summary>
-        /// <param name="connectionString">מחרוזת התחברות לבסיס הנתונים</param>
-        /// <param name="templatesFolder">נתיב לתיקיית תבניות HTML</param>
-        /// <param name="logsFolder">נתיב לתיקיית קבצי לוג</param>
-        /// <param name="chromePath">נתיב לקובץ ההפעלה של Chrome (אופציונלי)</param>
-        public ReportManager(string connectionString, string templatesFolder, string logsFolder = null, string chromePath = null)
+        public ReportManager(
+            IDataAccess dataAccess,
+            ITemplateManager templateManager,
+            ITemplateProcessor templateProcessor,
+            IPdfGenerator pdfGenerator,
+            IExcelGenerator excelGenerator,
+            IErrorManager errorManager,
+            IOptions<ReportSettings> settings)
         {
-            try
-            {
-                // אתחול מערכת רישום השגיאות
-                DbErrorLogger.Initialize(connectionString, logsFolder);
-                
-                // אתחול גישה לנתונים
-                _dataAccess = new DataAccess(connectionString);
-                
-                // הגדרת רכיבי מערכת התבניות החדשה
-                _templateManager = new HtmlTemplateManager(templatesFolder);
-                
-                // יצירת מופע ראשוני של מעבד התבניות עם מילון ריק
-                _templateProcessor = new HtmlTemplateProcessor(new Dictionary<string, string>());
-                
-                // יצירת ממיר HTML ל-PDF
-                var pdfConverter = new PuppeteerHtmlToPdfConverter(chromePath);
-                
-                // יוצר ה-PDF מבוסס HTML
-                _htmlPdfGenerator = new HtmlBasedPdfGenerator(_templateManager, _templateProcessor, pdfConverter);
-                
-                // יוצר אקסל ללא מיפויי כותרות בשלב זה (יוגדרו מאוחר יותר)
-                _excelGenerator = new ExcelGenerator();
-                
-                ErrorManager.LogInfo(
-                    "ReportManager_Initialized",
-                    $"מנהל הדוחות אותחל בהצלחה. תיקיית תבניות: {templatesFolder}");
-            }
-            catch (Exception ex)
-            {
-                // במקרה של שגיאת אתחול, זו שגיאה קריטית
-                ErrorManager.LogCriticalError(
-                    ErrorCodes.Report.Parameters_Invalid,
-                    "שגיאה באתחול מנהל הדוחות",
-                    ex);
-                throw new Exception("שגיאה באתחול מנהל הדוחות", ex);
-            }
+            _dataAccess = dataAccess ?? throw new ArgumentNullException(nameof(dataAccess));
+            _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
+            _templateProcessor = templateProcessor ?? throw new ArgumentNullException(nameof(templateProcessor));
+            _pdfGenerator = pdfGenerator ?? throw new ArgumentNullException(nameof(pdfGenerator));
+            _excelGenerator = excelGenerator ?? throw new ArgumentNullException(nameof(excelGenerator));
+            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
+            _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
         }
+
+        /// <summary>
+        /// מייצר דוח בצורה אסינכרונית ושומר אותו לקובץ
+        /// </summary>
         public void GenerateReportAsync(string reportName, OutputFormat format, params object[] parameters)
         {
             // הפעלת התהליך בחוט נפרד
@@ -77,47 +59,46 @@ namespace ReportGenerator.Core.Management
                     // הפקת הדוח באמצעות המתודה הקיימת - שים לב לawait
                     byte[] reportData = await Task.Run(() => GenerateReport(reportName, format, parameters));
 
-                    // כל השאר נשאר אותו דבר
-                    string DEFAULT_WORKING_DIRECTORY = "C:\\Epr";
-                    string TEMP_DATA_FOLDER = "Temp";
-                    string localDrive = Path.Combine(DEFAULT_WORKING_DIRECTORY, TEMP_DATA_FOLDER);
-                    //string targetFilePath = Path.Combine(@"\\tsclient\", localDrive.Replace(":", ""));
-                    string targetFilePath = localDrive;
+                    // שימוש בהגדרות מקובץ קונפיגורציה
+                    var outputFolder = _settings.OutputFolder;
+                    if (string.IsNullOrEmpty(outputFolder))
+                    {
+                        outputFolder = Path.Combine(_settings.TempFolder);
+                    }
 
                     // וידוא שהתיקיות קיימות
-                    Directory.CreateDirectory(localDrive);
-                    Directory.CreateDirectory(targetFilePath);
+                    Directory.CreateDirectory(outputFolder);
 
                     // קביעת סיומת הקובץ
                     string fileExt = format == OutputFormat.PDF ? "pdf" : "xlsx";
 
                     // יצירת שם קובץ ייחודי
                     string fileName = $"{reportName}_{DateTime.Now:yyyyMMdd_HHmmss}.{fileExt}";
-                    string fullPath = Path.Combine(targetFilePath, fileName);
+                    string fullPath = Path.Combine(outputFolder, fileName);
 
                     // שמירת הקובץ
                     File.WriteAllBytes(fullPath, reportData);
 
-                    // יצירת קובץ הדיאלוג
-                    string listenerDialogFile = Path.Combine(targetFilePath,
-                        $"{Path.GetFileNameWithoutExtension(fileName)}.opdialog");
+                    // יצירת קובץ הדיאלוג (אם נדרש)
+                    string listenerDialogFile = Path.Combine(outputFolder, $"{Path.GetFileNameWithoutExtension(fileName)}.opdialog");
                     File.Create(listenerDialogFile).Close();
 
-                    ErrorManager.LogInfo(
-                        "Report_Saved_Successfully",
+                    _errorManager.LogInfo(
+                        ErrorCode.General_Error,  // שימוש ב-enum
                         $"הדוח {reportName} נשמר בהצלחה בנתיב {fullPath}",
                         reportName: reportName);
                 }
                 catch (Exception ex)
                 {
-                    ErrorManager.LogCriticalError(
-                        ErrorCodes.Report.Generation_Failed,
+                    _errorManager.LogCriticalError(
+                        ErrorCode.Report_Generation_Failed,  // שימוש ב-enum
                         $"שגיאה בהפקת ושמירת דוח {reportName}",
                         ex,
                         reportName: reportName);
                 }
             });
         }
+
         /// <summary>
         /// מייצר דוח לפי שם, פורמט ופרמטרים
         /// </summary>
@@ -128,11 +109,11 @@ namespace ReportGenerator.Core.Management
         public async Task<byte[]> GenerateReport(string reportName, OutputFormat format, params object[] parameters)
         {
             // ניקוי שגיאות מהפקות קודמות
-            ErrorManager.ClearErrors();
+            _errorManager.ClearErrors();
 
             // רישום תחילת הפקת הדוח
-            ErrorManager.LogInfo(
-                "Report_Generation_Started",
+            _errorManager.LogInfo(
+                ErrorCode.General_Error,  // שימוש ב-enum
                 $"התחלת הפקת דוח {reportName} בפורמט {format}");
 
             // מעקב אחר משך זמן ההפקה
@@ -152,16 +133,11 @@ namespace ReportGenerator.Core.Management
                 // קבלת מיפויי שמות עמודות לעברית
                 var columnMappings = await _dataAccess.GetColumnMappings(reportConfig.StoredProcName);
 
-                if (format == OutputFormat.PDF)               
-                    _templateProcessor = new HtmlTemplateProcessor(columnMappings);   // עדכון מעבד התבניות עם המיפויים
-                else          
-                    _excelGenerator = new ExcelGenerator(columnMappings); // עדכון מחלקת האקסל עם המיפויים
-                
                 parsedParams = await ProcessSpecialParameters(parsedParams);
-                
+
                 // הרצת כל הפרוצדורות
                 var dataTables = await _dataAccess.ExecuteMultipleStoredProcedures(reportConfig.StoredProcName, parsedParams);
-                
+
                 // יצירת הדוח בפורמט המבוקש
                 byte[] result;
                 if (format == OutputFormat.PDF)
@@ -169,16 +145,16 @@ namespace ReportGenerator.Core.Management
                     // וידוא שתבנית HTML קיימת
                     if (!_templateManager.TemplateExists(reportName))
                     {
-                        ErrorManager.LogCriticalError(
-                            ErrorCodes.Template.Not_Found,
+                        _errorManager.LogCriticalError(
+                            ErrorCode.Template_Not_Found,  // שימוש ב-enum
                             $"לא נמצאה תבנית HTML עבור דוח {reportName}. יש ליצור קובץ תבנית בשם '{reportName}.html'",
                             reportName: reportName);
-                            
+
                         throw new Exception($"No HTML template found for report {reportName}. Please create an HTML template file named '{reportName}.html'");
                     }
-                    
+
                     // שימוש בגישה החדשה מבוססת HTML
-                    result = await _htmlPdfGenerator.GenerateFromTemplate(
+                    result = await _pdfGenerator.GenerateFromTemplate(
                         reportName, reportConfig.Title, dataTables, parsedParams);
                 }
                 else // Excel
@@ -186,26 +162,26 @@ namespace ReportGenerator.Core.Management
                     // יצירת קובץ אקסל עם כל הנתונים
                     result = _excelGenerator.Generate(dataTables, reportConfig.Title);
                 }
-                
+
                 var duration = DateTime.Now - startTime;
-                
+
                 // רישום סיום מוצלח של הפקת הדוח
-                ErrorManager.LogInfo(
-                    "Report_Generation_Completed",
+                _errorManager.LogInfo(
+                    ErrorCode.General_Error,  // שימוש ב-enum
                     $"הפקת דוח {reportName} הסתיימה בהצלחה בפורמט {format}. משך: {duration.TotalSeconds:F2} שניות. גודל: {result.Length / 1024:N0} KB",
                     reportName: reportName);
-                    
+
                 return result;
             }
             catch (Exception ex)
             {
                 // במקרה של שגיאה שלא טופלה בקוד הקודם, רשום אותה ופרטים נוספים
-                ErrorManager.LogCriticalError(
-                    ErrorCodes.Report.Generation_Failed,
+                _errorManager.LogCriticalError(
+                    ErrorCode.Report_Generation_Failed,  // שימוש ב-enum
                     $"שגיאה בהפקת דוח {reportName}",
                     ex,
                     reportName: reportName);
-                
+
                 throw new Exception($"Error generating report {reportName}: {ex.Message}", ex);
             }
         }
@@ -229,8 +205,8 @@ namespace ReportGenerator.Core.Management
                     {
                         if (i + 2 >= paramArray.Length)
                         {
-                            ErrorManager.LogError(
-                                ErrorCodes.Report.Parameters_Invalid,
+                            _errorManager.LogError(
+                                ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                                 ErrorSeverity.Error,
                                 $"מערך הפרמטרים אינו בפורמט הנכון");
                             throw new ArgumentException("Parameter array is not in the correct format");
@@ -240,8 +216,8 @@ namespace ReportGenerator.Core.Management
                         string paramName = paramArray[i]?.ToString();
                         if (string.IsNullOrEmpty(paramName))
                         {
-                            ErrorManager.LogError(
-                                ErrorCodes.Report.Parameters_Invalid,
+                            _errorManager.LogError(
+                                ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                                 ErrorSeverity.Error,
                                 $"שם פרמטר במיקום {i} הוא null או ריק");
                             throw new ArgumentException($"Parameter name at position {i} is null or empty");
@@ -269,8 +245,8 @@ namespace ReportGenerator.Core.Management
                             }
                             catch (Exception ex)
                             {
-                                ErrorManager.LogError(
-                                    ErrorCodes.Report.Parameters_Type_Mismatch,
+                                _errorManager.LogError(
+                                    ErrorCode.Parameters_Type_Mismatch,  // שימוש ב-enum
                                     ErrorSeverity.Error,
                                     $"סוג הפרמטר במיקום {i + 2} אינו DbType תקין: {dbTypeObject}",
                                     ex);
@@ -290,8 +266,8 @@ namespace ReportGenerator.Core.Management
             }
             catch (Exception ex) when (!(ex is ArgumentException))
             {
-                ErrorManager.LogError(
-                    ErrorCodes.Report.Parameters_Invalid,
+                _errorManager.LogError(
+                    ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                     ErrorSeverity.Error,
                     "שגיאה בניתוח מערך הפרמטרים",
                     ex);
@@ -306,13 +282,6 @@ namespace ReportGenerator.Core.Management
         {
             try
             {
-                // רישום המצב ההתחלתי
-                //Console.WriteLine($"FillMissingParameters for {procName}, starting with {parameters.Count} parameters:");
-                foreach (var param in parameters)
-                {
-                    Console.WriteLine($"  {param.Key} = {param.Value.Value ?? "NULL"} ({param.Value.Type})");
-                }
-
                 // קבלת רשימת הפרמטרים של הפרוצדורה
                 var procParams = await _dataAccess.GetProcedureParameters(procName);
 
@@ -353,18 +322,13 @@ namespace ReportGenerator.Core.Management
                         // הוספת הפרמטר
                         parameters.Add(param.Name, new ParamValue(defaultValue, dbType));
                         addedCount++;
-
-                        //Console.WriteLine($"Added missing parameter: {param.Name} = {defaultValue ?? "NULL"} ({dbType})");
                     }
                 }
-
-               // Console.WriteLine($"Added {addedCount} missing parameters");
             }
             catch (Exception ex)
             {
-                //Console.WriteLine($"Error in FillMissingParameters: {ex.Message}");
-                ErrorManager.LogWarning(
-                    ErrorCodes.Report.Parameters_Missing,
+                _errorManager.LogWarning(
+                    ErrorCode.Parameters_Missing,  // שימוש ב-enum
                     $"לא ניתן להוסיף פרמטרים חסרים לפרוצדורה {procName}: {ex.Message}",
                     ex);
             }
@@ -459,8 +423,8 @@ namespace ReportGenerator.Core.Management
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.Report.Parameters_Invalid,
+                _errorManager.LogNormalError(
+                    ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                     "Error processing special parameters",
                     ex);
 
@@ -471,14 +435,14 @@ namespace ReportGenerator.Core.Management
         {
             try
             {
-                string moazaName = await _dataAccess.GetMoazaName();               
+                string moazaName = await _dataAccess.GetMoazaName();
                 parameters.Add("rashutName", new ParamValue(moazaName, DbType.String));
-                
+
             }
             catch (Exception ex)
             {
-                ErrorManager.LogWarning(
-                    ErrorCodes.Report.Parameters_Invalid,
+                _errorManager.LogWarning(
+                    ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                     $"Error processing moaza parameter: {ex.Message}");
             }
         }
@@ -504,8 +468,8 @@ namespace ReportGenerator.Core.Management
                 }
                 catch (Exception ex)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.Report.Parameters_Invalid,
+                    _errorManager.LogWarning(
+                        ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                         $"Error processing month parameter (mnt): {ex.Message}");
                 }
             }
@@ -527,8 +491,8 @@ namespace ReportGenerator.Core.Management
                 }
                 catch (Exception ex)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.Report.Parameters_Invalid,
+                    _errorManager.LogWarning(
+                        ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                         $"Error processing charge type parameter (sugts): {ex.Message}");
                 }
             }
@@ -560,8 +524,8 @@ namespace ReportGenerator.Core.Management
                 }
                 catch (Exception ex)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.Report.Parameters_Invalid,
+                    _errorManager.LogWarning(
+                        ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                         $"Error processing charge type list parameter (sugtslist): {ex.Message}");
                 }
             }
@@ -604,8 +568,8 @@ namespace ReportGenerator.Core.Management
                 }
                 catch (Exception ex)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.Report.Parameters_Invalid,
+                    _errorManager.LogWarning(
+                        ErrorCode.Parameters_Invalid,  // שימוש ב-enum
                         $"Error processing settlement parameter (isvkod): {ex.Message}");
                 }
             }
@@ -617,6 +581,5 @@ namespace ReportGenerator.Core.Management
                 }
             }
         }
-
     }
 }
