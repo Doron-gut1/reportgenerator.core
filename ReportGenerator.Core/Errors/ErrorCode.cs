@@ -45,6 +45,8 @@ namespace ReportGenerator.Core.Errors
         Excel_Generation_Failed,
         
         // שגיאות דוח
-        Report_Generation_Failed
+        Report_Generation_Failed,
+        // הצלחת הפקה
+        PDF_Generation_Success
     }
 }

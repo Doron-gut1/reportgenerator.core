@@ -19,7 +19,7 @@ class Program
             string templatePath = @"..\..\..\..\ReportGenerator.Core\Generators\Examples";
             string reportName = "TrfbysugtsSummaryReport";
             OutputFormat outFormat = OutputFormat.PDF;
-            var reportManager = new ReportManager(connectionString, templatePath);
+           // var reportManager = new ReportManager(connectionString, templatePath);
 
             var parameters = new object[] {
                 "mnt", 275, DbType.Int32
@@ -45,7 +45,7 @@ class Program
             //    "hanmas", null, DbType.Int32,
             //    "isvkod", null, DbType.Int32
             //};
-            reportManager.GenerateReportAsync(reportName, outFormat, parameters);
+            //reportManager.GenerateReportAsync(reportName, outFormat, parameters);
         
             Console.ReadKey();
         }

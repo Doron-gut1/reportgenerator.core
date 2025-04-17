@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace ReportGenerator.Core.Generators
 {
@@ -17,6 +18,7 @@ namespace ReportGenerator.Core.Generators
         private readonly ITemplateManager _templateManager;
         private readonly ITemplateProcessor _templateProcessor;
         private readonly IHtmlToPdfConverter _pdfConverter;
+        private readonly IErrorManager _errorManager;
 
         /// <summary>
         /// יוצר מופע חדש של יוצר PDF מבוסס HTML
@@ -90,8 +92,8 @@ namespace ReportGenerator.Core.Generators
                 }
 
                 // רישום לוג של הצלחה
-                ErrorManager.LogInfo(
-                    "PDF_Generation_Success",
+                _errorManager.LogInfo(
+                    ErrorCode.PDF_Generation_Success,
                     $"קובץ PDF נוצר בהצלחה עבור דוח {templateName}. גודל: {pdfBytes.Length / 1024:N0} KB",
                     reportName: templateName);
 
@@ -102,7 +104,8 @@ namespace ReportGenerator.Core.Generators
                 // הוספת שגיאות ספציפיות יותר לפי סוג החריגה
                 if (ex.Message.Contains("Template") || ex.Message.Contains("תבנית"))
                 {
-                    ErrorManager.LogError(
+
+                    _errorManager.LogError(
                         ErrorCode.Template_Not_Found,
                         ErrorSeverity.Critical,
                         $"שגיאה בטעינת תבנית {templateName}",
@@ -111,7 +114,7 @@ namespace ReportGenerator.Core.Generators
                 }
                 else if (ex.Message.Contains("Chrome") || ex.Message.Contains("Browser"))
                 {
-                    ErrorManager.LogError(
+                    _errorManager.LogError(
                         ErrorCode.PDF_Chrome_Not_Found,
                         ErrorSeverity.Critical,
                         "שגיאה בטעינת דפדפן Chrome להמרת PDF",
@@ -120,7 +123,7 @@ namespace ReportGenerator.Core.Generators
                 }
                 else
                 {
-                    ErrorManager.LogError(
+                    _errorManager.LogError(
                         ErrorCode.PDF_Generation_Failed,
                         ErrorSeverity.Critical,
                         $"שגיאה כללית ביצירת PDF עבור דוח {templateName}",

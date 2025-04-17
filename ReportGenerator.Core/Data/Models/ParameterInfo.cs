@@ -24,5 +24,7 @@ namespace ReportGenerator.Core.Data.Models
         /// האם הפרמטר יכול לקבל ערך Null
         /// </summary>
         public bool IsNullable { get; set; }
+
+        public bool IsOptional { get; set; }
     }
 }
