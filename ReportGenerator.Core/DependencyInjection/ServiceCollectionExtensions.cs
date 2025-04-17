@@ -37,6 +37,7 @@ namespace ReportGenerator.Core.DependencyInjection
             services.AddTransient<IExcelGenerator, ExcelGenerator>();
             services.AddTransient<IReportGenerator, ReportManager>();
             services.AddSingleton<IErrorLogger, DbErrorLogger>();
+            services.AddSingleton<IErrorManager, ErrorManager>();
 
             return services;
         }
@@ -72,6 +73,7 @@ namespace ReportGenerator.Core.DependencyInjection
             services.AddTransient<IExcelGenerator, ExcelGenerator>();
             services.AddTransient<IReportGenerator, ReportManager>();
             services.AddSingleton<IErrorLogger, DbErrorLogger>();
+            services.AddSingleton<IErrorManager, ErrorManager>();
 
             return services;
         }
