@@ -1,18 +1,40 @@
-﻿using Dapper;
+using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
+using ReportGenerator.Core.Configuration;
 using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
+using ReportGenerator.Core.Interfaces;
 using System.Data;
 
 namespace ReportGenerator.Core.Data
 {
-    public class DataAccess
+    public class DataAccess : IDataAccess
     {
         private readonly string _connectionString;
+        private readonly IErrorManager _errorManager;
 
+        /// <summary>
+        /// יוצר מופע חדש של מחלקת גישה לנתונים
+        /// </summary>
+        /// <param name="errorManager">מנהל שגיאות</param>
+        /// <param name="settings">הגדרות</param>
+        public DataAccess(IErrorManager errorManager, IOptions<ReportSettings> settings)
+        {
+            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
+            
+            var settingsValue = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
+            _connectionString = settingsValue.ConnectionString ?? throw new ArgumentException("Connection string cannot be null", nameof(settings));
+        }
+
+        /// <summary>
+        /// יוצר מופע חדש של מחלקת גישה לנתונים (לתאימות אחורה)
+        /// </summary>
+        /// <param name="connectionString">מחרוזת התחברות</param>
         public DataAccess(string connectionString)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            _errorManager = new ErrorManager(new DbErrorLogger());
         }
 
         /// <summary>
@@ -31,8 +53,8 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    ErrorManager.LogError(
-                        ErrorCodes.DB.Report_NotFound, 
+                    _errorManager.LogError(
+                        ErrorCode.DB_Report_NotFound,
                         ErrorSeverity.Critical,
                         $"דוח בשם {reportName} לא נמצא במערכת");
                     throw new Exception($"Report Name {reportName} not found");
@@ -42,8 +64,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (SqlException ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_Query_Failed,
                     ErrorSeverity.Critical,
                     $"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",
                     ex);
@@ -51,8 +73,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex) when (!(ex.InnerException is SqlException) && !(ex is InvalidOperationException))
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.Connection_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_Connection_Failed,
                     ErrorSeverity.Critical,
                     $"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",
                     ex);
@@ -74,8 +96,8 @@ namespace ReportGenerator.Core.Data
                     
                 if (result == null)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.DB.MonthName_NotFound,
+                    _errorManager.LogWarning(
+                        ErrorCode.DB_MonthName_NotFound,
                         $"לא נמצא שם עבור חודש {mnt}");
                     return $"חודש {mnt}";
                 }
@@ -84,8 +106,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     $"שגיאה בשליפת שם חודש {mnt}",
                     ex);
                 return $"חודש {mnt}";
@@ -106,8 +128,8 @@ namespace ReportGenerator.Core.Data
                     
                 if (result == null)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.DB.MonthName_NotFound,
+                    _errorManager.LogWarning(
+                        ErrorCode.DB_MonthName_NotFound,
                         $"לא נמצא שם תקופה עבור חודש {mnt}");
                     return $"תקופה {mnt}";
                 }
@@ -116,8 +138,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     $"שגיאה בשליפת שם תקופה {mnt}",
                     ex);
                 return $"תקופה {mnt}";
@@ -133,8 +155,8 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.DB.MoazaName_NotFound,
+                    _errorManager.LogWarning(
+                        ErrorCode.DB_MoazaName_NotFound,
                         "לא נמצא שם מועצה");
                     return "מועצה לא ידועה";
                 }
@@ -143,8 +165,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     "שגיאה בשליפת שם מועצה",
                     ex);
                 return "מועצה לא ידועה";
@@ -165,8 +187,8 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.DB.SugtsName_NotFound,
+                    _errorManager.LogWarning(
+                        ErrorCode.DB_SugtsName_NotFound,
                         $"לא נמצא שם עבור סוג חיוב {sugts}");
                     return $"סוג חיוב {sugts}";
                 }
@@ -175,8 +197,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     $"שגיאה בשליפת שם סוג חיוב {sugts}",
                     ex);
                 return $"סוג חיוב {sugts}";
@@ -197,8 +219,8 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.DB.IshvName_NotFound,
+                    _errorManager.LogWarning(
+                        ErrorCode.DB_IshvName_NotFound,
                         $"לא נמצא שם עבור יישוב {isvkod}");
                     return $"יישוב {isvkod}";
                 }
@@ -207,8 +229,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     $"שגיאה בשליפת שם יישוב {isvkod}",
                     ex);
                 return $"יישוב {isvkod}";
@@ -267,8 +289,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     $"שגיאה בשליפת שמות עבור קודים {codes} מטבלה {tableName}",
                     ex);
                 return codes;
@@ -290,8 +312,8 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    ErrorManager.LogError(
-                        ErrorCodes.DB.Report_Config_Invalid,
+                    _errorManager.LogError(
+                        ErrorCode.DB_Report_Config_Invalid,
                         ErrorSeverity.Critical,
                         $"הגדרות דוח {reportName} לא נמצאו במערכת");
                     throw new Exception($"Report configuration for {reportName} not found");
@@ -301,8 +323,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (SqlException ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_Query_Failed,
                     ErrorSeverity.Critical,
                     $"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",
                     ex);
@@ -310,8 +332,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex) when (!(ex.InnerException is SqlException) && !(ex is InvalidOperationException))
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.Connection_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_Connection_Failed,
                     ErrorSeverity.Critical,
                     $"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",
                     ex);
@@ -339,8 +361,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     $"שגיאה בבדיקה אם {objectName} הוא פונקציה טבלאית",
                     ex);
                 return false;
@@ -392,8 +414,8 @@ namespace ReportGenerator.Core.Data
                 
                 if (mappings.Count == 0)
                 {
-                    ErrorManager.LogWarning(
-                        ErrorCodes.DB.ColumnMapping_NotFound,
+                    _errorManager.LogWarning(
+                        ErrorCode.DB_ColumnMapping_NotFound,
                         $"לא נמצאו מיפויי עמודות עבור פרוצדורות: {procNames}");
                 }
                 
@@ -401,8 +423,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogNormalError(
-                    ErrorCodes.DB.Query_Failed,
+                _errorManager.LogNormalError(
+                    ErrorCode.DB_Query_Failed,
                     $"שגיאה בשליפת מיפויי עמודות עבור פרוצדורות: {procNames}",
                     ex);
                 return mappings;
@@ -449,8 +471,8 @@ namespace ReportGenerator.Core.Data
                 }
                 catch (Exception ex)
                 {
-                    ErrorManager.LogError(
-                        ErrorCodes.DB.Query_Failed,
+                    _errorManager.LogError(
+                        ErrorCode.DB_Query_Failed,
                         ErrorSeverity.Error,
                         $"שגיאה בהרצת {objectName}",
                         ex);
@@ -523,8 +545,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (SqlException ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.TableFunc_Execution_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_TableFunc_Execution_Failed,
                     ErrorSeverity.Error,
                     $"שגיאת SQL בהרצת פונקציה טבלאית {functionName}",
                     ex);
@@ -532,8 +554,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.Connection_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_Connection_Failed,
                     ErrorSeverity.Error,
                     $"שגיאת התחברות או הרצה של פונקציה טבלאית {functionName}",
                     ex);
@@ -577,8 +599,8 @@ namespace ReportGenerator.Core.Data
                     else if (!procParam.IsOptional)
                     {
                         // אם זה פרמטר חובה שלא הועבר, רשום שגיאה
-                        ErrorManager.LogError(
-                            ErrorCodes.DB.StoredProc_MissingParam,
+                        _errorManager.LogError(
+                            ErrorCode.DB_StoredProc_MissingParam,
                             ErrorSeverity.Error,
                             $"פרמטר נדרש {procParam.Name} חסר עבור פרוצדורה {spName}");
                             
@@ -596,8 +618,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (SqlException ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.StoredProc_Execution_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_StoredProc_Execution_Failed,
                     ErrorSeverity.Error,
                     $"שגיאת SQL בהרצת פרוצדורה {spName}",
                     ex);
@@ -610,8 +632,8 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                ErrorManager.LogError(
-                    ErrorCodes.DB.Connection_Failed,
+                _errorManager.LogError(
+                    ErrorCode.DB_Connection_Failed,
                     ErrorSeverity.Error,
                     $"שגיאת התחברות או הרצה של פרוצדורה {spName}",
                     ex);
@@ -672,20 +694,15 @@ namespace ReportGenerator.Core.Data
                         };
 
                         uniqueParams[paramName] = paramInfo;
-
-                        // הוספת יותר מידע לצורכי דיבוג
-                        //Console.WriteLine($"Parameter found: {paramName}, Type: {paramInfo.DataType}, HasDefault: {param.HasDefault}, DefaultValue: {param.DefaultValue}");
                     }
                 }
 
                 parameters = uniqueParams.Values.ToList();
-               // Console.WriteLine($"Found {parameters.Count} unique parameters for {procName}");
             }
             catch (Exception ex)
             {
-                //Console.WriteLine($"Error in GetProcedureParameters: {ex.Message}");
-                ErrorManager.LogWarning(
-                    "GetProcedureParameters_Failed",
+                _errorManager.LogWarning(
+                    ErrorCode.Parameters_Missing,
                     $"שגיאה בקבלת פרמטרים לפרוצדורה {procName}: {ex.Message}",
                     ex);
             }
@@ -693,22 +710,18 @@ namespace ReportGenerator.Core.Data
             // אם לא מצאנו פרמטרים בדרך הרגילה, ננסה להסיק מהתנהגות הפרוצדורה
             if (parameters.Count == 0)
             {
-                // ניסיון להריץ את הפרוצדורה רק עם הפרמטר הראשון כדי לזהות שגיאות פרמטרים חסרים
                 await InferParametersFromExecution(procName, parameters);
             }
 
             return parameters;
         }
 
-        // פונקצית עזר חדשה להסקת פרמטרים מניסיון הרצה
+        // פונקצית עזר להסקת פרמטרים מניסיון הרצה
         private async Task InferParametersFromExecution(string procName, List<ParameterInfo> parameters)
         {
             try
             {
                 // אם כל השאר נכשל, נוסיף פרמטרים נפוצים לפרוצדורות מסוג דוח
-                Console.WriteLine($"Using fallback parameter inference for {procName}");
-
-                // פרמטרים נפוצים בדוחות - הוספה רק אם לא זוהו פרמטרים בדרך אחרת
                 if (!parameters.Any(p => p.Name.Equals("mnt", StringComparison.OrdinalIgnoreCase)))
                 {
                     parameters.Add(new ParameterInfo { Name = "mnt", DataType = "int", IsNullable = false });
@@ -728,14 +741,15 @@ namespace ReportGenerator.Core.Data
                             IsNullable = true,
                             DefaultValue = null
                         });
-
-                        Console.WriteLine($"Added inferred parameter: {paramName}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in parameter inference: {ex.Message}");
+                _errorManager.LogWarning(
+                    ErrorCode.Parameters_Missing,
+                    $"שגיאה בהסקת פרמטרים: {ex.Message}",
+                    ex);
             }
         }
 
@@ -805,40 +819,6 @@ namespace ReportGenerator.Core.Data
                 DbType.VarNumeric => SqlDbType.Decimal,
                 DbType.Xml => SqlDbType.Xml,
                 _ => SqlDbType.NVarChar,
-            };
-        }
-    }
-
-    /// <summary>
-    /// מידע על פרמטר של פרוצדורה מאוחסנת
-    /// </summary>
-    public class ParameterInfo
-    {
-        public string Name { get; set; }
-        public string DataType { get; set; }
-        public string Mode { get; set; }
-        public bool IsNullable { get; set; }
-        public string DefaultValue { get; set; }
-
-        public bool IsOptional => !string.IsNullOrEmpty(DefaultValue) || IsNullable == true;
-
-        public DbType GetDbType()
-        {
-            return DataType.ToLower() switch
-            {
-                "varchar" => DbType.String,
-                "nvarchar" => DbType.String,
-                "int" => DbType.Int32,
-                "decimal" => DbType.Decimal,
-                "datetime" => DbType.DateTime,
-                "bit" => DbType.Boolean,
-                "float" => DbType.Double,
-                "bigint" => DbType.Int64,
-                "smallint" => DbType.Int16,
-                "date" => DbType.Date,
-                "time" => DbType.Time,
-                "money" => DbType.Currency,
-                _ => DbType.String
             };
         }
     }
