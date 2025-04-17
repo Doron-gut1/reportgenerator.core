@@ -25,6 +25,39 @@ namespace ReportGenerator.Core.Generators
         /// </summary>
         /// <param name="columnMappings">מילון המיפויים בין שמות עמודות באנגלית לעברית</param>
         /// <param name="errorManager">מנהל שגיאות מוזרק</param>
+        public HtmlTemplateProcessor(IDataAccess dataAccess, IErrorManager errorManager)
+        {
+            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
+
+            // קבלת מיפויים דרך DataAccess במקום הזרקה ישירה של Dictionary
+            _columnMappings = dataAccess?.GetDefaultColumnMappings()?.Result
+                ?? new Dictionary<string, string>();
+
+            // אתחול מנוע Handlebars
+            _handlebars = Handlebars.Create();
+
+            // רישום הלפר לפורמט מספרים
+            _handlebars.RegisterHelper("format", (writer, context, parameters) => {
+                if (parameters.Length > 0 && parameters[0] != null)
+                {
+                    writer.Write(FormatValue(parameters[0]));
+                }
+            });
+
+            _handlebars.RegisterHelper("notEqualZero", (writer, options, context, arguments) => {
+                if (arguments.Length > 0 && arguments[0] != null && int.TryParse(arguments[0].ToString(), out int value))
+                {
+                    if (value != 0)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+        }
         public HtmlTemplateProcessor(Dictionary<string, string> columnMappings, IErrorManager errorManager)
         {
             _columnMappings = columnMappings ?? new Dictionary<string, string>();

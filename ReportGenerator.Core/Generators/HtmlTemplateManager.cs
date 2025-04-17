@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using ReportGenerator.Core.Configuration;
 using ReportGenerator.Core.Errors;
 using ReportGenerator.Core.Interfaces;
 
@@ -21,13 +23,24 @@ namespace ReportGenerator.Core.Generators
         /// </summary>
         /// <param name="templatesFolder">נתיב לתיקיית התבניות</param>
         /// <param name="errorManager">מנהל שגיאות</param>
-        public HtmlTemplateManager(string templatesFolder, IErrorManager errorManager)
+        public HtmlTemplateManager(IOptions<ReportSettings> settings, IErrorManager errorManager)
         {
             _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
 
-            if (string.IsNullOrEmpty(templatesFolder))
+            if (settings?.Value == null)
             {
-                var error = new ArgumentNullException(nameof(templatesFolder));
+                var error = new ArgumentNullException(nameof(settings));
+                _errorManager.LogError(
+                    ErrorCode.Template_Invalid_Format,
+                    ErrorSeverity.Critical,
+                    "הגדרות דוחות לא יכולות להיות ריקות",
+                    error);
+                throw error;
+            }
+
+            if (string.IsNullOrEmpty(settings.Value.TemplatesFolder))
+            {
+                var error = new ArgumentException("Template folder path cannot be empty", nameof(settings));
                 _errorManager.LogError(
                     ErrorCode.Template_Invalid_Format,
                     ErrorSeverity.Critical,
@@ -36,7 +49,7 @@ namespace ReportGenerator.Core.Generators
                 throw error;
             }
 
-            _templatesFolder = templatesFolder;
+            _templatesFolder = settings.Value.TemplatesFolder;
 
             // וידוא שהתיקייה קיימת
             try

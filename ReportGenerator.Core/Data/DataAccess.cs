@@ -640,6 +640,39 @@ namespace ReportGenerator.Core.Data
                 throw;
             }
         }
+        public async Task<Dictionary<string, string>> GetDefaultColumnMappings()
+        {
+            try
+            {
+                // פה יכול להיות קוד ששולף מיפויים כלליים מבסיס הנתונים
+                var mappings = new Dictionary<string, string>();
+
+                // שליפת כל המיפויים
+                using var connection = new SqlConnection(_connectionString);
+                var results = await connection.QueryAsync<ColumnMapping>(
+                    @"SELECT TableName, ColumnName, HebrewAlias 
+              FROM ReportsGeneratorColumns 
+              WHERE SpecificProcName IS NULL");
+
+                foreach (var result in results)
+                {
+                    string key = $"{result.TableName}_{result.ColumnName}";
+                    mappings[key] = result.HebrewAlias;
+                }
+
+                return mappings;
+            }
+            catch (Exception ex)
+            {
+                _errorManager.LogError(
+                    ErrorCode.DB_Query_Failed,
+                    ErrorSeverity.Error,
+                    "שגיאה בטעינת מיפויי עמודות",
+                    ex);
+
+                return new Dictionary<string, string>();
+            }
+        }
 
         /// <summary>
         /// מקבל מידע על פרמטרים של פרוצדורה מאוחסנת

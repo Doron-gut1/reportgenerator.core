@@ -21,7 +21,7 @@ namespace ReportGenerator.Core.Errors
         DB_StoredProc_MissingParam,
         DB_StoredProc_Execution_Failed,
         DB_TableFunc_Execution_Failed,
-        
+
         // שגיאות פרמטרים
         Parameters_Invalid,
         Parameters_Type_Mismatch,

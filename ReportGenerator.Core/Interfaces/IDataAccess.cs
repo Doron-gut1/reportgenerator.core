@@ -56,5 +56,8 @@ namespace ReportGenerator.Core.Interfaces
         /// מקבל מידע על פרמטרים של פרוצדורה מאוחסנת
         /// </summary>
         Task<List<ParameterInfo>> GetProcedureParameters(string procName);
+
+        Task<Dictionary<string, string>> GetDefaultColumnMappings();
+
     }
 }
