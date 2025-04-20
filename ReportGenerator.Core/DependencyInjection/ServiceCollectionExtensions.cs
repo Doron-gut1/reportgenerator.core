@@ -58,7 +58,7 @@ namespace ReportGenerator.Core.DependencyInjection
                 options.ConnectionString = settings.ConnectionString;
                 options.TemplatesFolder = settings.TemplatesFolder;
                 options.OutputFolder = settings.OutputFolder;
-                options.TempFolder = settings.TempFolder;
+                //options.TempFolder = settings.TempFolder;
                 options.LogsFolder = settings.LogsFolder;
                 options.ChromePath = settings.ChromePath;
                 options.AutoDownloadChrome = settings.AutoDownloadChrome;

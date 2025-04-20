@@ -3,7 +3,8 @@ namespace ReportGenerator.Core.Configuration
     /// <summary>
     /// הגדרות מרכזיות למערכת הדוחות
     /// </summary>
-    public class ReportSettings
+    public class 
+        ReportSettings
     {
         /// <summary>
         /// נתיב לתיקיית תבניות HTML
@@ -18,7 +19,7 @@ namespace ReportGenerator.Core.Configuration
         /// <summary>
         /// נתיב לתיקיית מידע זמני
         /// </summary>
-        public string TempFolder { get; set; } = "Temp";
+        //public string TempFolder { get; set; } = "Temp";
 
         /// <summary>
         /// נתיב לתיקיית לוגים

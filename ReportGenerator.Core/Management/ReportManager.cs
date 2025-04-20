@@ -61,10 +61,10 @@ namespace ReportGenerator.Core.Management
 
                     // שימוש בהגדרות מקובץ קונפיגורציה
                     var outputFolder = _settings.OutputFolder;
-                    if (string.IsNullOrEmpty(outputFolder))
-                    {
-                        outputFolder = Path.Combine(_settings.TempFolder);
-                    }
+                    //if (string.IsNullOrEmpty(outputFolder))
+                    //{
+                    //    outputFolder = Path.Combine(_settings.TempFolder);
+                    //}
 
                     // וידוא שהתיקיות קיימות
                     Directory.CreateDirectory(outputFolder);

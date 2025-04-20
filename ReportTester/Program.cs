@@ -40,13 +40,12 @@ class Program
                 ConnectionString = connectionString,
                 TemplatesFolder = templatePath,
                 OutputFolder = Path.Combine(AppContext.BaseDirectory, "Output"),
-                TempFolder = Path.Combine(AppContext.BaseDirectory, "Temp"),
                 LogsFolder = Path.Combine(AppContext.BaseDirectory, "Logs")
             };
 
             // וידוא שתיקיות קיימות
             Directory.CreateDirectory(reportSettings.OutputFolder);
-            Directory.CreateDirectory(reportSettings.TempFolder);
+            //Directory.CreateDirectory(reportSettings.TempFolder);
             Directory.CreateDirectory(reportSettings.LogsFolder);
 
             Console.WriteLine($"Output folder: {reportSettings.OutputFolder}");
@@ -59,7 +58,6 @@ class Program
                 options.ConnectionString = reportSettings.ConnectionString;
                 options.TemplatesFolder = reportSettings.TemplatesFolder;
                 options.OutputFolder = reportSettings.OutputFolder;
-                options.TempFolder = reportSettings.TempFolder;
                 options.LogsFolder = reportSettings.LogsFolder;
             });
 
