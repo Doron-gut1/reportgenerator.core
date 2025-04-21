@@ -758,21 +758,28 @@ namespace ReportGenerator.Core.Data
         {
             try
             {
-                // פה יכול להיות קוד ששולף מיפויים כלליים מבסיס הנתונים
-                var mappings = new Dictionary<string, string>();
+                var mappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 // שליפת כל המיפויים
                 using var connection = new SqlConnection(_connectionString);
                 var results = await connection.QueryAsync<ColumnMapping>(
                     @"SELECT TableName, ColumnName, HebrewAlias 
-              FROM ReportsGeneratorColumns 
-              WHERE SpecificProcName IS NULL");
+              FROM ReportsGeneratorColumns");
 
                 foreach (var result in results)
                 {
-                    string key = $"{result.TableName}_{result.ColumnName}";
-                    mappings[key] = result.HebrewAlias;
+                    // שמירה כמיפוי מורכב (TableName_ColumnName)
+                    string compositeKey = $"{result.TableName}_{result.ColumnName}";
+                    mappings[compositeKey] = result.HebrewAlias;
+                    
+                    // שמירה גם של השם הפשוט עצמו
+                    mappings[result.ColumnName] = result.HebrewAlias;
                 }
+                
+                // לוג למיפויים שנטענו
+                _errorManager.LogInfo(
+                    ErrorCode.General_Info,
+                    $"נטענו {mappings.Count} מיפויים של שמות עמודות");
 
                 return mappings;
             }

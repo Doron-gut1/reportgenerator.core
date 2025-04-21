@@ -50,7 +50,7 @@ class Program
 
             Console.WriteLine($"Output folder: {reportSettings.OutputFolder}");
 
-            OutputFormat outFormat = OutputFormat.PDF;
+            OutputFormat outFormat = OutputFormat.Excel;
 
             // רישום השירותים באופן מפורט
             services.Configure<ReportSettings>(options =>
@@ -67,7 +67,11 @@ class Program
             services.AddTransient<ITemplateProcessor, HtmlTemplateProcessor>();
             services.AddTransient<IHtmlToPdfConverter, PuppeteerHtmlToPdfConverter>();
             services.AddTransient<IPdfGenerator, HtmlBasedPdfGenerator>();
-            services.AddTransient<IExcelGenerator, ExcelGenerator>();
+            services.AddTransient<IExcelGenerator>(sp => {
+                var dataAccess = sp.GetRequiredService<IDataAccess>();
+                var columnMappings = dataAccess.GetDefaultColumnMappings().GetAwaiter().GetResult();
+                return new ExcelGenerator(columnMappings);
+            });
             services.AddTransient<IReportGenerator, ReportManager>();
             services.AddSingleton<IErrorLogger, DbErrorLogger>();
             services.AddSingleton<IErrorManager, ErrorManager>();
@@ -83,9 +87,12 @@ class Program
                 "mnt", 275, DbType.Int32
             };
 
-            Console.WriteLine($"Generating report: {reportName} in {outFormat} format...");
+            Console.WriteLine("\nיוצר מחדש את הדוח בפורמט אקסל...");
+            Console.WriteLine("הדוח יכלול כותרות בעברית ועיצוב משופר");
+            
+            // הפקת הדוח עם לוג מידע נוסף
             reportGenerator.GenerateReportAsync(reportName, outFormat, parameters);
-            Console.WriteLine("Report generation started. Check output folder.");
+            Console.WriteLine("\nהפקת הדוח החלה. בדוק בתיקיית הפלט.");
 
             Console.WriteLine("\nPress any key to exit...");
             Console.ReadKey();

@@ -34,7 +34,12 @@ namespace ReportGenerator.Core.DependencyInjection
             services.AddTransient<ITemplateProcessor, HtmlTemplateProcessor>();
             services.AddTransient<IHtmlToPdfConverter, PuppeteerHtmlToPdfConverter>();
             services.AddTransient<IPdfGenerator, HtmlBasedPdfGenerator>();
-            services.AddTransient<IExcelGenerator, ExcelGenerator>();
+            services.AddTransient<IExcelGenerator>(sp => {
+                var dataAccess = sp.GetRequiredService<IDataAccess>();
+                // קבלת המיפויים מבסיס הנתונים
+                var columnMappings = dataAccess.GetDefaultColumnMappings().GetAwaiter().GetResult();
+                return new ExcelGenerator(columnMappings);
+            });
             services.AddTransient<IReportGenerator, ReportManager>();
             services.AddSingleton<IErrorLogger, DbErrorLogger>();
             services.AddSingleton<IErrorManager, ErrorManager>();
@@ -70,7 +75,12 @@ namespace ReportGenerator.Core.DependencyInjection
             services.AddTransient<ITemplateProcessor, HtmlTemplateProcessor>();
             services.AddTransient<IHtmlToPdfConverter, PuppeteerHtmlToPdfConverter>();
             services.AddTransient<IPdfGenerator, HtmlBasedPdfGenerator>();
-            services.AddTransient<IExcelGenerator, ExcelGenerator>();
+            services.AddTransient<IExcelGenerator>(sp => {
+                var dataAccess = sp.GetRequiredService<IDataAccess>();
+                // קבלת המיפויים מבסיס הנתונים
+                var columnMappings = dataAccess.GetDefaultColumnMappings().GetAwaiter().GetResult();
+                return new ExcelGenerator(columnMappings);
+            });
             services.AddTransient<IReportGenerator, ReportManager>();
             services.AddSingleton<IErrorLogger, DbErrorLogger>();
             services.AddSingleton<IErrorManager, ErrorManager>();

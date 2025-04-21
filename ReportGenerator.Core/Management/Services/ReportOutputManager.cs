@@ -64,7 +64,7 @@ namespace ReportGenerator.Core.Management.Services
             string reportTitle, 
             OutputFormat format,
             Dictionary<string, System.Data.DataTable> dataTables, 
-            Dictionary<string, ParamValue> parameters)
+            Dictionary<string, ParamValue> parameters, bool WithStatistics = false)
         {
             if (format == OutputFormat.PDF)
             {
@@ -86,7 +86,10 @@ namespace ReportGenerator.Core.Management.Services
             else // Excel
             {
                 // יצירת קובץ אקסל עם כל הנתונים
-                return _excelGenerator.Generate(dataTables, reportTitle);
+                if (!WithStatistics)
+                    return _excelGenerator.Generate(dataTables, reportTitle);
+                else
+                    return _excelGenerator.GenerateWithStatistics(dataTables, reportTitle);
             }
         }
 
