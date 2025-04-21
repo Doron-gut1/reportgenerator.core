@@ -6,13 +6,50 @@ using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
 using ReportGenerator.Core.Interfaces;
 using System.Data;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ReportGenerator.Core.Data
 {
+    /// <summary>
+    /// פריט במטמון עם תאריך יצירה ותפוגה
+    /// </summary>
+    internal class CacheItem<T>
+    {
+        public T Value { get; }
+        public DateTime CreatedAt { get; }
+        public DateTime ExpiresAt { get; }
+        
+        public bool IsExpired => DateTime.Now > ExpiresAt;
+        
+        public CacheItem(T value, TimeSpan expiration)
+        {
+            Value = value;
+            CreatedAt = DateTime.Now;
+            ExpiresAt = CreatedAt.Add(expiration);
+        }
+    }
+    
     public class DataAccess : IDataAccess
     {
         private readonly string _connectionString;
         private readonly IErrorManager _errorManager;
+        
+        // מטמונים לפריטים נפוצים
+        private static readonly ConcurrentDictionary<string, CacheItem<ReportConfig>> _reportConfigCache = new();
+        private static readonly ConcurrentDictionary<string, CacheItem<string>> _monthNameCache = new();
+        private static readonly ConcurrentDictionary<string, CacheItem<string>> _periodNameCache = new();
+        private static readonly ConcurrentDictionary<int, CacheItem<string>> _sugtsNameCache = new();
+        private static readonly ConcurrentDictionary<int, CacheItem<string>> _ishvNameCache = new();
+        private static readonly ConcurrentDictionary<string, CacheItem<Dictionary<string, string>>> _columnMappingsCache = new();
+        private static readonly ConcurrentDictionary<string, CacheItem<List<ParameterInfo>>> _procedureParametersCache = new();
+        
+        // קבועים לזמני תפוגה
+        private const int MAX_CACHE_ITEMS = 500; // מספר מקסימלי של פריטים במטמון
+        private const int CACHE_MINUTES_SHORT = 5;  // לנתונים שמשתנים תכופות
+        private const int CACHE_MINUTES_MEDIUM = 30;  // לנתונים שמשתנים לפעמים
+        private const int CACHE_MINUTES_LONG = 120;  // לנתונים שנדירות משתנים
 
         /// <summary>
         /// יוצר מופע חדש של מחלקת גישה לנתונים
@@ -59,7 +96,7 @@ namespace ReportGenerator.Core.Data
                         $"דוח בשם {reportName} לא נמצא במערכת");
                     throw new Exception($"Report Name {reportName} not found");
                 }
-
+                
                 return result;
             }
             catch (SqlException ex)
@@ -87,6 +124,13 @@ namespace ReportGenerator.Core.Data
         /// </summary>
         public async Task<string> GetMonthName(int mnt)
         {
+            // בדיקה במטמון קודם
+            string cacheKey = $"Month_{mnt}";
+            if (_monthNameCache.TryGetValue(cacheKey, out CacheItem<string> cacheItem) && !cacheItem.IsExpired)
+            {
+                return cacheItem.Value;
+            }
+            
             try
             {
                 using var connection = new SqlConnection(_connectionString);
@@ -101,6 +145,12 @@ namespace ReportGenerator.Core.Data
                         $"לא נמצא שם עבור חודש {mnt}");
                     return $"חודש {mnt}";
                 }
+                
+                // שמירה במטמון עם תפוגה
+                _monthNameCache[cacheKey] = new CacheItem<string>(result, TimeSpan.FromMinutes(CACHE_MINUTES_LONG));
+                
+                // ניקוי המטמון אם יש יותר מדי פריטים
+                CleanupCache(_monthNameCache, MAX_CACHE_ITEMS);
                 
                 return result;
             }
@@ -119,6 +169,13 @@ namespace ReportGenerator.Core.Data
         /// </summary>
         public async Task<string> GetPeriodName(int mnt)
         {
+            // בדיקה במטמון קודם
+            string cacheKey = $"Period_{mnt}";
+            if (_periodNameCache.TryGetValue(cacheKey, out CacheItem<string> cacheItem) && !cacheItem.IsExpired)
+            {
+                return cacheItem.Value;
+            }
+            
             try
             {
                 using var connection = new SqlConnection(_connectionString);
@@ -133,6 +190,12 @@ namespace ReportGenerator.Core.Data
                         $"לא נמצא שם תקופה עבור חודש {mnt}");
                     return $"תקופה {mnt}";
                 }
+                
+                // שמירה במטמון עם תפוגה
+                _periodNameCache[cacheKey] = new CacheItem<string>(result, TimeSpan.FromMinutes(CACHE_MINUTES_LONG));
+                
+                // ניקוי המטמון אם יש יותר מדי פריטים
+                CleanupCache(_periodNameCache, MAX_CACHE_ITEMS);
                 
                 return result;
             }
@@ -178,6 +241,12 @@ namespace ReportGenerator.Core.Data
         /// </summary>
         public async Task<string> GetSugtsName(int sugts)
         {
+            // בדיקה במטמון
+            if (_sugtsNameCache.TryGetValue(sugts, out CacheItem<string> cacheItem) && !cacheItem.IsExpired)
+            {
+                return cacheItem.Value;
+            }
+            
             try
             {
                 using var connection = new SqlConnection(_connectionString);
@@ -192,6 +261,12 @@ namespace ReportGenerator.Core.Data
                         $"לא נמצא שם עבור סוג חיוב {sugts}");
                     return $"סוג חיוב {sugts}";
                 }
+                
+                // שמירה במטמון עם תפוגה
+                _sugtsNameCache[sugts] = new CacheItem<string>(result, TimeSpan.FromMinutes(CACHE_MINUTES_MEDIUM));
+                
+                // ניקוי המטמון אם יש יותר מדי פריטים
+                CleanupCache(_sugtsNameCache, MAX_CACHE_ITEMS);
                 
                 return result;
             }
@@ -210,6 +285,12 @@ namespace ReportGenerator.Core.Data
         /// </summary>
         public async Task<string> GetIshvName(int isvkod)
         {
+            // בדיקה במטמון
+            if (_ishvNameCache.TryGetValue(isvkod, out CacheItem<string> cacheItem) && !cacheItem.IsExpired)
+            {
+                return cacheItem.Value;
+            }
+            
             try
             {
                 using var connection = new SqlConnection(_connectionString);
@@ -224,6 +305,12 @@ namespace ReportGenerator.Core.Data
                         $"לא נמצא שם עבור יישוב {isvkod}");
                     return $"יישוב {isvkod}";
                 }
+                
+                // שמירה במטמון עם תפוגה
+                _ishvNameCache[isvkod] = new CacheItem<string>(result, TimeSpan.FromMinutes(CACHE_MINUTES_MEDIUM));
+                
+                // ניקוי המטמון אם יש יותר מדי פריטים
+                CleanupCache(_ishvNameCache, MAX_CACHE_ITEMS);
                 
                 return result;
             }
@@ -298,10 +385,16 @@ namespace ReportGenerator.Core.Data
         }
 
         /// <summary>
-        /// מקבל את הגדרות הדוח
+        /// מקבל את הגדרות הדוח וממטמן את התוצאה לשימוש עתידי
         /// </summary>
         public async Task<ReportConfig> GetReportConfig(string reportName)
         {
+            // בדיקה במטמון
+            if (_reportConfigCache.TryGetValue(reportName, out CacheItem<ReportConfig> cacheItem) && !cacheItem.IsExpired)
+            {
+                return cacheItem.Value;
+            }
+            
             try
             {
                 using var connection = new SqlConnection(_connectionString);
@@ -318,6 +411,12 @@ namespace ReportGenerator.Core.Data
                         $"הגדרות דוח {reportName} לא נמצאו במערכת");
                     throw new Exception($"Report configuration for {reportName} not found");
                 }
+
+                // שמירה במטמון עם תפוגה ארוכה (תצורות דוחות לא משתנות הרבה)
+                _reportConfigCache[reportName] = new CacheItem<ReportConfig>(result, TimeSpan.FromMinutes(CACHE_MINUTES_LONG));
+                
+                // ניקוי המטמון אם יש יותר מדי פריטים
+                CleanupCache(_reportConfigCache, MAX_CACHE_ITEMS);
 
                 return result;
             }
@@ -376,6 +475,12 @@ namespace ReportGenerator.Core.Data
         /// <returns>מילון עם המיפויים מאנגלית לעברית</returns>
         public async Task<Dictionary<string, string>> GetColumnMappings(string procNames)
         {
+            // בדיקה במטמון
+            if (_columnMappingsCache.TryGetValue(procNames, out CacheItem<Dictionary<string, string>> cacheItem) && !cacheItem.IsExpired)
+            {
+                return cacheItem.Value;
+            }
+            
             Dictionary<string, string> mappings = new(StringComparer.OrdinalIgnoreCase);
             
             try
@@ -417,6 +522,15 @@ namespace ReportGenerator.Core.Data
                     _errorManager.LogWarning(
                         ErrorCode.DB_ColumnMapping_NotFound,
                         $"לא נמצאו מיפויי עמודות עבור פרוצדורות: {procNames}");
+                }
+                
+                // שמירה במטמון אם יש לפחות מיפוי אחד
+                if (mappings.Count > 0)
+                {
+                    _columnMappingsCache[procNames] = new CacheItem<Dictionary<string, string>>(mappings, TimeSpan.FromMinutes(CACHE_MINUTES_LONG));
+                    
+                    // ניקוי המטמון אם יש יותר מדי פריטים
+                    CleanupCache(_columnMappingsCache, MAX_CACHE_ITEMS);
                 }
                 
                 return mappings;
@@ -564,7 +678,7 @@ namespace ReportGenerator.Core.Data
         }
 
         /// <summary>
-        /// הרצת פרוצדורה מאוחסנת וקבלת התוצאות כטבלה
+        /// הרצת פרוצדורה מאוחסנת וקבלת התוצאות כטבלה עם תמיכה בקישינג פרמטרים
         /// </summary>
         /// <param name="spName">שם הפרוצדורה</param>
         /// <param name="parameters">פרמטרים</param>
@@ -679,6 +793,12 @@ namespace ReportGenerator.Core.Data
         /// </summary>
         public async Task<List<ParameterInfo>> GetProcedureParameters(string procName)
         {
+            // בדיקה במטמון
+            if (_procedureParametersCache.TryGetValue(procName, out CacheItem<List<ParameterInfo>> cacheItem) && !cacheItem.IsExpired)
+            {
+                return cacheItem.Value;
+            }
+            
             var parameters = new List<ParameterInfo>();
 
             try
@@ -746,6 +866,15 @@ namespace ReportGenerator.Core.Data
                 await InferParametersFromExecution(procName, parameters);
             }
 
+            // שמירה במטמון אם יש לפחות פרמטר אחד
+            if (parameters.Count > 0)
+            {
+                _procedureParametersCache[procName] = new CacheItem<List<ParameterInfo>>(parameters, TimeSpan.FromMinutes(CACHE_MINUTES_LONG));
+                
+                // ניקוי המטמון אם יש יותר מדי פריטים
+                CleanupCache(_procedureParametersCache, MAX_CACHE_ITEMS);
+            }
+            
             return parameters;
         }
 
@@ -853,6 +982,36 @@ namespace ReportGenerator.Core.Data
                 DbType.Xml => SqlDbType.Xml,
                 _ => SqlDbType.NVarChar,
             };
+        }
+        
+        /// <summary>
+        /// מנקה מטמון אם הוא גדול מדי
+        /// </summary>
+        private void CleanupCache<TKey, TValue>(ConcurrentDictionary<TKey, CacheItem<TValue>> cache, int maxItems)
+        {
+            // מחיקת פריטים שפג תוקפם
+            var expiredItems = cache.Where(kvp => kvp.Value.IsExpired)
+                                    .Select(kvp => kvp.Key)
+                                    .ToList();
+                                    
+            foreach (var key in expiredItems)
+            {
+                cache.TryRemove(key, out _);
+            }
+            
+            // אם עדיין יותר מדי פריטים, הסר את הישנים ביותר
+            if (cache.Count > maxItems)
+            {
+                var oldestItems = cache.OrderBy(kvp => kvp.Value.CreatedAt)
+                                      .Take(cache.Count - maxItems / 2)  // מסירים חצי מהמטמון
+                                      .Select(kvp => kvp.Key)
+                                      .ToList();
+                                      
+                foreach (var key in oldestItems)
+                {
+                    cache.TryRemove(key, out _);
+                }
+            }
         }
     }
 }

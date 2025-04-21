@@ -169,28 +169,29 @@
         <!-- סיכום חיוב תקופתי -->
         <div class="summary-box">
             <div class="summary-title">סיכום חיוב תקופתי</div>
-            <!-- טבלה מתוקנת עם שורה בודדת עם data-table-row -->
-            <div data-table-row="GetTrfbysugtsSummaryPeriodic" class="summary-data">
+            <!-- שימוש ב-#with במקום data-table-row -->
+            {{#with GetTrfbysugtsSummaryPeriodic}}
+            <div class="summary-data">
                 <table class="summary-table">
                     <tr>
                         <td>חיוב גולמי שנתי:</td>
-                        <td>₪ {{allbruto}}</td>
+                        <td>₪ {{format allbruto}}</td>
                     </tr>
                     <tr>
                         <td>חיוב גולמי תקופתי:</td>
-                        <td>₪ {{bruto}}</td>
+                        <td>₪ {{format bruto}}</td>
                     </tr>
                     <tr>
                         <td>סכום הנחות ה.ק:</td>
-                        <td>₪ {{sumhk}}</td>
+                        <td>₪ {{format sumhk}}</td>
                     </tr>
                     <tr>
                         <td>סכום הנחות אחרות:</td>
-                        <td>₪ {{sumhan}}</td>
+                        <td>₪ {{format sumhan}}</td>
                     </tr>
                     <tr>
                         <td>סכום לתשלום:</td>
-                        <td>₪ {{paysum}}</td>
+                        <td>₪ {{format paysum}}</td>
                     </tr>
                     <tr>
                         <td>מספר נכסים:</td>
@@ -202,19 +203,22 @@
                     </tr>
                 </table>
             </div>
+            {{/with}}
         </div>
 
         <!-- סיכום חיובים מראש -->
         <div class="summary-box">
             <div class="summary-title">סיכום חיובים מראש</div>
 
-            <!-- טבלה מתוקנת עם שורה בודדת עם data-table-row -->
-            <div data-table-row="GetTrfbysugtsSummaryAdvance" class="summary-data">
+            <!-- שימוש ב-#with במקום data-table-row -->
+            {{#with GetTrfbysugtsSummaryAdvance}}
+            <div class="summary-data">
                 <table class="summary-table">
                     <tr>
                         <td>חיוב גולמי שנתי:</td>
                         <td>₪ {{bruto}}</td>
                     </tr>
+                    <tr>
                         <td>סכום הנחות ה.ק:</td>
                         <td>₪ {{sumhk}}</td>
                     </tr>
@@ -227,7 +231,6 @@
                         <td>₪ {{paysum}}</td>
                     </tr>
                     <tr>
-                    <tr>
                         <td>מספר נכסים:</td>
                         <td>{{cnths}}</td>
                     </tr>
@@ -237,6 +240,7 @@
                     </tr>
                 </table>
             </div>
+            {{/with}}
         </div>
     </div>
 
@@ -253,22 +257,24 @@
             </tr>
         </thead>
         <tbody>
-            <!-- שינוי: כל שורה צריכה להיות בתוך TR עם data-table-row -->
-            <tr data-table-row="GetTrfbysugtsPaymentMethodSummary">
-                {{#if IsSummary == 1}}
+            <!-- שימוש ב-#each במקום data-table-row -->
+            {{#each GetTrfbysugtsPaymentMethodSummary_list}}
+            <tr>
+                {{#isSummary IsSummary}}
                 <td class="payment-total"><strong>סה"כ</strong></td>
-                <td class="amount payment-total"><strong>₪ {{paysum}}</strong></td>
-                <td class="amount payment-total"><strong>₪ {{sumhk}}</strong></td>
+                <td class="amount payment-total"><strong>₪ {{format paysum}}</strong></td>
+                <td class="amount payment-total"><strong>₪ {{format sumhk}}</strong></td>
                 <td class="payment-total"><strong>{{cnths}}</strong></td>
                 <td class="payment-total"><strong>{{cntmsp}}</strong></td>
                 {{else}}
                 <td>{{hesder}}</td>
-                <td class="amount">₪ {{paysum}}</td>
-                <td class="amount">₪ {{sumhk}}</td>
+                <td class="amount">₪ {{format paysum}}</td>
+                <td class="amount">₪ {{format sumhk}}</td>
                 <td>{{cnths}}</td>
                 <td>{{cntmsp}}</td>
-                {{/if}}
+                {{/isSummary}}
             </tr>
+            {{/each}}
         </tbody>
     </table>
 
@@ -284,19 +290,22 @@
             </tr>
         </thead>
         <tbody>
-            <tr data-table-row="GetTrfbysugtsDiscountSummary">
-                {{#if IsSummary == -1}}
+            <!-- שימוש ב-#each במקום data-table-row -->
+            {{#each GetTrfbysugtsDiscountSummary_list}}
+            <tr>
+                {{#isSummary IsSummary}}
                 <td class="payment-total"><strong>סה"כ</strong></td>
                 <td class="payment-total">{{hanmas_teur}}</td>
-                <td class="amount payment-total">₪ {{sumhan}}</td>
+                <td class="amount payment-total">₪ {{format sumhan}}</td>
                 <td class="payment-total">{{cnths}}</td>
                 {{else}}
                 <td>{{TRFBYSUGTS_hnckod}}</td>
                 <td>{{hanmas_teur}}</td>
-                <td class="amount">₪ {{sumhan}}</td>
+                <td class="amount">₪ {{format sumhan}}</td>
                 <td>{{cnths}}</td>
-                {{/if}}
+                {{/isSummary}}
             </tr>
+            {{/each}}
         </tbody>
     </table>
 </body>

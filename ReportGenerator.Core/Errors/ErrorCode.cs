@@ -7,6 +7,7 @@ namespace ReportGenerator.Core.Errors
     {
         // שגיאות כלליות
         General_Error,
+        General_Info,         // הודעות אינפורמטיביות ולא שגיאות
         
         // שגיאות מסד נתונים
         DB_Connection_Failed,
@@ -46,6 +47,9 @@ namespace ReportGenerator.Core.Errors
         
         // שגיאות דוח
         Report_Generation_Failed,
+        Report_Data_Retrieval_Failed,  // שגיאת הבאת נתונים
+        Report_Save_Failed,            // שגיאת שמירת דוח לקובץ
+        
         // הצלחת הפקה
         PDF_Generation_Success
     }

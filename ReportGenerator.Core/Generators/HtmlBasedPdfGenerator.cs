@@ -92,10 +92,10 @@ namespace ReportGenerator.Core.Generators
                 }
 
                 // רישום לוג של הצלחה
-                _errorManager.LogInfo(
-                    ErrorCode.PDF_Generation_Success,
-                    $"קובץ PDF נוצר בהצלחה עבור דוח {templateName}. גודל: {pdfBytes.Length / 1024:N0} KB",
-                    reportName: templateName);
+                //_errorManager.LogInfo(
+                //    ErrorCode.PDF_Generation_Success,
+                //    $"קובץ PDF נוצר בהצלחה עבור דוח {templateName}. גודל: {pdfBytes.Length / 1024:N0} KB",
+                //    reportName: templateName);
 
                 return pdfBytes;
             }
