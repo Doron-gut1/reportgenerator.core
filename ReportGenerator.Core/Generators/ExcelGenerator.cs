@@ -304,14 +304,7 @@ namespace ReportGenerator.Core.Generators
                                 isSummary = summaryValue is bool boolVal && boolVal ||
                                           summaryValue is int intVal && (intVal == 1 || intVal == -1) ||
                                           summaryValue is string strVal && (strVal == "1" || strVal == "-1" || strVal.ToLower() == "true");
-                            }
-                            else if (data.Columns.Contains("hesder") && row["hesder"] != DBNull.Value)
-                            {
-                                var hesderValue = row["hesder"];
-                                isSummary = hesderValue is int hInt && hInt == -1 ||
-                                           hesderValue is string hStr && hStr == "-1";
-                            }
-                            
+                            }                
                             if (isSummary)
                             {
                                 rowsForChart.Add(row);
