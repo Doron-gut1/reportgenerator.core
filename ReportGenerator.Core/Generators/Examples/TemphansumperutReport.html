@@ -1,0 +1,200 @@
+﻿<!DOCTYPE html>
+<html lang="he-IL" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ReportTitle}}</title>
+    <style>
+        @page {
+            size: landscape;
+            margin: 0.5cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            padding: 5px;
+            margin: 0;
+            font-size: 11px;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .report-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .report-subtitle {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .params-box {
+            background-color: #f5f5f5;
+            padding: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .params-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .params-table td {
+                padding: 3px 5px;
+                text-align: center;
+                border: 1px solid #ddd;
+                width: 33%;
+            }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            table-layout: fixed;
+        }
+
+            .data-table th, .data-table td {
+                border: 1px solid #000;
+                padding: 4px;
+                text-align: right;
+                overflow: hidden;
+                word-wrap: break-word;
+                font-size: 10px;
+            }
+
+            .data-table th {
+                background-color: #e0e0e0;
+                font-weight: bold;
+                white-space: nowrap;
+            }
+
+        .amount {
+            text-align: left;
+            direction: ltr;
+            white-space: nowrap;
+        }
+
+        .footer {
+            font-size: 9px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 5px;
+            width: 100%;
+        }
+
+        /* סדר וגודל העמודות כפי שמוצג בתמונה */
+        .data-table th:nth-child(1), .data-table td:nth-child(1) {
+            width: 9%;
+        }
+        /* fyr */
+        .data-table th:nth-child(2), .data-table td:nth-child(2) {
+            width: 7%;
+        }
+        /* TASH_HANKOD */
+        .data-table th:nth-child(3), .data-table td:nth-child(3) {
+            width: 15%;
+        }
+        /* HANMAS_TEUR */
+        .data-table th:nth-child(4), .data-table td:nth-child(4) {
+            width: 12%;
+        }
+        /* MSP_FULLNAME */
+        .data-table th:nth-child(5), .data-table td:nth-child(5) {
+            width: 8%;
+        }
+        /* TASH_TASHHS */
+        .data-table th:nth-child(6), .data-table td:nth-child(6) {
+            width: 11%;
+        }
+        /* HS_KTOVET */
+        .data-table th:nth-child(7), .data-table td:nth-child(7) {
+            width: 7%;
+        }
+        /* HS_GODEL */
+        .data-table th:nth-child(8), .data-table td:nth-child(8) {
+            width: 15%;
+        }
+        /* TASH_SMHAN */
+        .data-table th:nth-child(9), .data-table td:nth-child(9) {
+            width: 16%;
+        }
+        /* smarn */
+
+        /* עיצוב שורת סיכום */
+        .payment-total {
+            font-weight: bold;
+            color: #0055aa !important;
+            background-color: #f0f8ff !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- כותרת הדוח -->
+    <div class="report-header">
+        <div class="report-title">דוח הנחות לתקופה</div>
+        <div class="report-subtitle">לתקופה: {{frstdt}} - {{lastdate}}</div>
+    </div>
+
+    <!-- פרמטרים -->
+    <div class="params-box">
+        <table class="params-table">
+            <tr>
+                <td><strong>תאריך הפקה:</strong> {{CurrentDate}}</td>
+                <td><strong>סוג חיוב:</strong> {{sugtsname}}</td>
+                <td><strong>יישוב:</strong> {{ishvname}}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- טבלת נתונים - סדר עמודות לפי התמונה -->
+    <table class="data-table">
+        <thead>
+            <tr>
+                <!-- סדר הפוך לפי התמונה -->
+                <th>שנה</th>
+                <th>קוד הנחה</th>
+                <th>תיאור ההנחה</th>
+                <th>שם מלא</th>
+                <th>מספר נכס</th>
+                <th>כתובת</th>
+                <th>גודל (מ״ר)</th>
+                <th>סכום הנחה</th>
+                <th>סכום חיוב</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr data-table-row="hansumperut">
+                {{#if IsSummary == 1}}
+                <td class="payment-total"></td>
+                <td class="payment-total"></td>
+                <td class="payment-total"><strong>{{HANMAS_TEUR}}</strong></td>
+                <td class="payment-total"></td>
+                <td class="payment-total"></td>
+                <td class="payment-total"></td>
+                <td class="payment-total"></td>
+                <td class="amount payment-total"><strong>₪ {{TASH_SMHAN}}</strong></td>
+                <td class="amount payment-total"><strong>₪ {{smarn}}</strong></td>
+                {{else}}
+                <td>{{fyr}}</td>
+                <td>{{TASH_HANKOD}}</td>
+                <td>{{HANMAS_TEUR}}</td>
+                <td>{{MSP_FULLNAME}}</td>
+                <td>{{TASH_TASHHS}}</td>
+                <td>{{HS_KTOVET}}</td>
+                <td>{{HS_GODEL}}</td>
+                <td class="amount">₪ {{TASH_SMHAN}}</td>
+                <td class="amount">₪ {{smarn}}</td>
+                {{/if}}
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

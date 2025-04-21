@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="he-IL" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>דו"ח ארנונה לחודש</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            padding: 10px;
+            margin: 0;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .report-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .report-subtitle {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .report-params {
+            background-color: #f5f5f5;
+            padding: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 13px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .amount {
+            text-align: left;
+            direction: ltr;
+        }
+
+        /* סגנון לשורת סיכום */
+        tr[data-summary="1"] {
+            font-weight: bold;
+            background-color: #f0f8ff !important;
+            color: #0055aa;
+        }
+
+            tr[data-summary="1"] td {
+                border-top: 2px solid #999;
+            }
+    </style>
+</head>
+<body>
+    <div class="report-header">
+        <div class="report-title">{{ReportTitle}}</div>
+        <div class="report-subtitle">{{PeriodName}} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+    </div>
+
+    <div class="report-params">
+        {{#if sughskod != 0}}{{sughskod}} :&nbsp;&nbsp;&nbsp;&nbsp;{{/if}} {{#if sughskod != 0}}{{isvad}} - {{isvme}} :&nbsp;&nbsp;&nbsp;&nbsp;{{/if}} {{mnt}} :&nbsp;&nbsp;&nbsp;&nbsp; {{CurrentDate}} :&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>מספר נכס</th>
+                <th>קוד משלם פנימי</th>
+                <th>שם לקוח</th>
+                <th>יישוב</th>
+                <th>סכום תשלום</th>
+                <th>סכום ה.ק</th>
+                <th>סכום הנחה</th>
+                <th>ברוטו</th>
+                <th>ברוטו שנתי</th>
+                <th>הסדר</th>
+                <th>תשלום מראש</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr data-table-row="GetArnRepCrntMkomit" data-summary="{{IsSummary}}">
+                <td>{{ARN_HS}}</td>
+                <td>{{ARN_MSPKOD}}</td>
+                <td>{{fullname}}</td>
+                <td>{{isuvname}}</td>
+                <td class="amount">{{ARN_PAYSUM}}</td>
+                <td class="amount">{{ARN_SUMHK}}</td>
+                <td class="amount">{{ARN_SUMHAN}}</td>
+                <td class="amount">{{bruto}}</td>
+                <td class="amount">{{allbruto}}</td>
+                <td>{{hesder}}</td>
+                <td>
+                    {{#if payinad != null}}
+                    שנתי
+                    {{else}}
+                    -
+                    {{/if}}
+                </td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="text-align: center;"><strong>סה"כ</strong></td>
+                <td class="amount"><strong>{{Sum(ARN_PAYSUM)}}</strong></td>
+                <td class="amount"><strong>{{Sum(ARN_SUMHK)}}</strong></td>
+                <td class="amount"><strong>{{Sum(ARN_SUMHAN)}}</strong></td>
+                <td class="amount"><strong>{{Sum(bruto)}}</strong></td>
+                <td class="amount"><strong>{{Sum(allbruto)}}</strong></td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>
