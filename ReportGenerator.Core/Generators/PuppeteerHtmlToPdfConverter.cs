@@ -24,7 +24,7 @@ namespace ReportGenerator.Core.Generators
         /// </summary>
         /// <param name="errorManager">מנהל שגיאות</param>
         /// <param name="chromePath">נתיב לתוכנת Chrome (אופציונלי)</param>
-        public PuppeteerHtmlToPdfConverter(IErrorManager errorManager, string chromePath = null)
+        public PuppeteerHtmlToPdfConverter(IErrorManager errorManager, string chromePath = @"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
         {
             _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
             _chromePath = chromePath;
@@ -75,13 +75,19 @@ namespace ReportGenerator.Core.Generators
                 }
                 else
                 {
-                    var browserFetcher = new BrowserFetcher();
-                    await browserFetcher.DownloadAsync();
+                    //var browserFetcher = new BrowserFetcher();
+                    //await browserFetcher.DownloadAsync();
 
-                    _errorManager.LogInfo(
+                    //_errorManager.LogInfo(
+                    //    ErrorCode.General_Error,
+                    //    "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
+                    _errorManager.LogCriticalError(
                         ErrorCode.General_Error,
-                        "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
+                        "there is no chrome in the classic path \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe");
+
+                    throw new Exception($"Error generating report");
                 }
+
 
                 using var browser = await Puppeteer.LaunchAsync(browserOptions);
                 using var page = await browser.NewPageAsync();
