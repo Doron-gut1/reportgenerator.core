@@ -78,22 +78,22 @@ namespace ReportGenerator.Core.Generators
         /// </summary>
         /// <param name="templateName">שם התבנית (ללא סיומת)</param>
         /// <returns>האם התבנית קיימת</returns>
-        public bool TemplateExists(string templateName)
+        public bool TemplateExists(string templateName, string? departmentId = null)
         {
-            try
-            {
-                string fullPath = GetTemplatePath(templateName);
-                return File.Exists(fullPath);
-            }
-            catch (Exception ex)
-            {
-                _errorManager.LogError(
-                    ErrorCode.Template_Not_Found,
-                    ErrorSeverity.Error,
-                    $"שגיאה בבדיקת קיום תבנית {templateName}",
-                    ex);
-                return false;
-            }
+        try
+        {
+        string fullPath = GetTemplatePath(templateName, departmentId);
+        return File.Exists(fullPath);
+        }
+        catch (Exception ex)
+        {
+        _errorManager.LogError(
+        ErrorCode.Template_Not_Found,
+        ErrorSeverity.Error,
+        $"שגיאה בבדיקת קיום תבנית {templateName}",
+        ex);
+        return false;
+        }
         }
 
         /// <summary>
@@ -122,54 +122,55 @@ namespace ReportGenerator.Core.Generators
         /// טוען תבנית HTML מהדיסק
         /// </summary>
         /// <param name="templateName">שם התבנית (ללא סיומת)</param>
+        /// <param name="departmentId">מזהה המחלקה (אופציונלי)</param>
         /// <returns>תוכן התבנית כמחרוזת</returns>
-        public async Task<string> GetTemplateAsync(string templateName)
+        public async Task<string> GetTemplateAsync(string templateName, string? departmentId = null)
         {
-            string fullPath = GetTemplatePath(templateName);
+        string fullPath = GetTemplatePath(templateName, departmentId);
 
-            try
-            {
-                if (!File.Exists(fullPath))
-                {
-                    var error = new FileNotFoundException($"Template '{templateName}' not found at {fullPath}");
-                    _errorManager.LogError(
-                        ErrorCode.Template_Not_Found,
-                        ErrorSeverity.Critical,
-                        $"תבנית '{templateName}' לא נמצאה בנתיב {fullPath}",
-                        error,
-                        reportName: templateName);
-                    throw error;
-                }
+        try
+        {
+        if (!File.Exists(fullPath))
+        {
+        var error = new FileNotFoundException($"Template '{templateName}' not found at {fullPath}");
+        _errorManager.LogError(
+        ErrorCode.Template_Not_Found,
+        ErrorSeverity.Critical,
+        $"תבנית '{templateName}' לא נמצאה בנתיב {fullPath}",
+        error,
+            reportName: templateName);
+            throw error;
+            }
 
-                string templateContent = await File.ReadAllTextAsync(fullPath);
-                
-                if (string.IsNullOrWhiteSpace(templateContent))
-                {
-                    _errorManager.LogWarning(
-                        ErrorCode.Template_Invalid_Format,
-                        $"תבנית '{templateName}' ריקה או מכילה רווחים בלבד",
-                        reportName: templateName);
-                }
-                
-                return templateContent;
-            }
-            catch (FileNotFoundException)
-            {
-                // כבר טופל למעלה
-                throw;
-            }
-            catch (Exception ex)
-            {
-                var error = new Exception($"Failed to read template file {fullPath}", ex);
-                _errorManager.LogError(
-                    ErrorCode.Template_Invalid_Format,
-                    ErrorSeverity.Critical,
-                    $"שגיאה בקריאת קובץ תבנית {templateName}",
-                    ex,
-                    reportName: templateName);
-                throw error;
-            }
+        string templateContent = await File.ReadAllTextAsync(fullPath);
+        
+        if (string.IsNullOrWhiteSpace(templateContent))
+        {
+        _errorManager.LogWarning(
+        ErrorCode.Template_Invalid_Format,
+        $"תבנית '{templateName}' ריקה או מכילה רווחים בלבד",
+                reportName: templateName);
         }
+        
+            return templateContent;
+        }
+        catch (FileNotFoundException)
+        {
+        // כבר טופל למעלה
+            throw;
+        }
+        catch (Exception ex)
+        {
+        var error = new Exception($"Failed to read template file {fullPath}", ex);
+        _errorManager.LogError(
+        ErrorCode.Template_Invalid_Format,
+        ErrorSeverity.Critical,
+        $"שגיאה בקריאת קובץ תבנית {templateName}",
+        ex,
+            reportName: templateName);
+            throw error;
+            }
+    }
 
         /// <summary>
         /// שומר תבנית HTML לדיסק
@@ -203,8 +204,9 @@ namespace ReportGenerator.Core.Generators
         /// מקבל את הנתיב המלא לקובץ התבנית
         /// </summary>
         /// <param name="templateName">שם התבנית (ללא סיומת)</param>
+        /// <param name="departmentId">מזהה המחלקה (אופציונלי)</param>
         /// <returns>נתיב מלא לקובץ</returns>
-        private string GetTemplatePath(string templateName)
+        private string GetTemplatePath(string templateName, string? departmentId = null)
         {
             if (string.IsNullOrEmpty(templateName))
             {
@@ -219,7 +221,41 @@ namespace ReportGenerator.Core.Generators
             
             // ניקוי שם הקובץ משמות תווים אסורים
             string safeFileName = string.Join("_", templateName.Split(Path.GetInvalidFileNameChars()));
-            return Path.Combine(_templatesFolder, $"{safeFileName}.html");
+            
+            // בדיקה אם צריך להשתמש בתיקיית מחלקה
+            string baseFolder = _templatesFolder;
+            if (!string.IsNullOrEmpty(departmentId))
+            {
+                // בדיקת המחלקה לתווים לא חוקיים
+                string safeDepartmentId = string.Join("_", departmentId.Split(Path.GetInvalidFileNameChars()));
+                baseFolder = Path.Combine(baseFolder, safeDepartmentId);
+                
+                // בדיקה אם התיקייה קיימת
+                if (!Directory.Exists(baseFolder))
+                {
+                    _errorManager.LogWarning(
+                        ErrorCode.Template_Invalid_Department,
+                        $"תיקיית מחלקה '{departmentId}' לא קיימת. מנסה ליצור אותה.");
+                    
+                    // ניסיון ליצור את התיקייה
+                    try
+                    {
+                        Directory.CreateDirectory(baseFolder);
+                    }
+                    catch (Exception ex)
+                    {
+                        _errorManager.LogError(
+                            ErrorCode.Template_Invalid_Department,
+                            ErrorSeverity.Error,
+                            $"לא ניתן ליצור את תיקיית המחלקה: {departmentId}",
+                            ex);
+                        // אם לא הצליח ליצור את התיקייה, נחזור לתיקייה הראשית
+                        baseFolder = _templatesFolder;
+                    }
+                }
+            }
+            
+            return Path.Combine(baseFolder, $"{safeFileName}.html");
         }
     }
 }

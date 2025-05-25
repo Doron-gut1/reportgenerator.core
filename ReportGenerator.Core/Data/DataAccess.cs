@@ -9,6 +9,7 @@ using System.Data;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 
 namespace ReportGenerator.Core.Data
 {
@@ -640,9 +641,12 @@ namespace ReportGenerator.Core.Data
                     // המרה לסוג הפרמטר המתאים
                     SqlDbType sqlType = GetSqlDbType(param.Value.Type);
                     
+                    // המרת JsonElement לסוג הנכון לפני העברה לפרוצדורה
+                    object convertedValue = ConvertJsonElementToSqlType(param.Value.Value, param.Value.Type);
+                    
                     var sqlParam = new SqlParameter($"@{param.Key}", sqlType)
                     {
-                        Value = param.Value.Value ?? DBNull.Value
+                        Value = convertedValue ?? DBNull.Value
                     };
                     
                     command.Parameters.Add(sqlParam);
@@ -678,6 +682,59 @@ namespace ReportGenerator.Core.Data
         }
 
         /// <summary>
+        /// ממיר אובייקט JsonElement לסוג שבסיס הנתונים יכול לעבוד איתו
+        /// </summary>
+        /// <param name="value">הערך להמרה (יכול להיות מסוג JsonElement או כל סוג אחר)</param>
+        /// <param name="dbType">סוג הנתונים הרצוי</param>
+        /// <returns>הערך המומר לסוג המתאים</returns>
+        private object ConvertJsonElementToSqlType(object value, DbType dbType)
+        {
+            // אם זה לא JsonElement, להחזיר את הערך כמו שהוא
+            if (value == null || value is not JsonElement)
+                return value ?? DBNull.Value;
+            
+            // המרת JsonElement לסוג המתאים
+            JsonElement jsonElement = (JsonElement)value;
+            
+            try
+            {
+                return dbType switch
+                {
+                    DbType.Int16 => jsonElement.ValueKind == JsonValueKind.Number ? 
+                        jsonElement.GetInt16() : Convert.ToInt16(jsonElement.ToString()),
+                    DbType.Int32 => jsonElement.ValueKind == JsonValueKind.Number ? 
+                        jsonElement.GetInt32() : Convert.ToInt32(jsonElement.ToString()),
+                    DbType.Int64 => jsonElement.ValueKind == JsonValueKind.Number ? 
+                        jsonElement.GetInt64() : Convert.ToInt64(jsonElement.ToString()),
+                    DbType.Decimal => jsonElement.ValueKind == JsonValueKind.Number ? 
+                        jsonElement.GetDecimal() : Convert.ToDecimal(jsonElement.ToString()),
+                    DbType.Double => jsonElement.ValueKind == JsonValueKind.Number ? 
+                        jsonElement.GetDouble() : Convert.ToDouble(jsonElement.ToString()),
+                    DbType.Single => jsonElement.ValueKind == JsonValueKind.Number ? 
+                        jsonElement.GetSingle() : Convert.ToSingle(jsonElement.ToString()),
+                    DbType.Date or DbType.DateTime or DbType.DateTime2 => jsonElement.ValueKind == JsonValueKind.String ? 
+                        jsonElement.GetDateTime() : Convert.ToDateTime(jsonElement.ToString()),
+                    DbType.Boolean => jsonElement.ValueKind == JsonValueKind.True || jsonElement.ValueKind == JsonValueKind.False ? 
+                        jsonElement.GetBoolean() : Convert.ToBoolean(jsonElement.ToString()),
+                    DbType.String or DbType.AnsiString or DbType.StringFixedLength or DbType.AnsiStringFixedLength => 
+                        jsonElement.ValueKind == JsonValueKind.String ? jsonElement.GetString() : jsonElement.ToString(),
+                    DbType.Guid => jsonElement.ValueKind == JsonValueKind.String ?
+                        jsonElement.GetGuid() : Guid.Parse(jsonElement.ToString()),
+                    _ => jsonElement.ToString() ?? string.Empty
+                };
+            }
+            catch (Exception ex)
+            {
+                _errorManager.LogWarning(
+                    ErrorCode.Parameters_Invalid_Value,
+                    $"שגיאה בהמרת ערך {jsonElement} לסוג {dbType}: {ex.Message}");
+                    
+                // החזרת הערך כמחרוזת אם ההמרה נכשלה
+                return jsonElement.ToString() ?? string.Empty;
+            }
+        }
+
+        /// <summary>
         /// הרצת פרוצדורה מאוחסנת וקבלת התוצאות כטבלה עם תמיכה בקישינג פרמטרים
         /// </summary>
         /// <param name="spName">שם הפרוצדורה</param>
@@ -705,9 +762,12 @@ namespace ReportGenerator.Core.Data
                     // בדיקה אם הפרמטר הזה נמצא ברשימת הפרמטרים שהועברו
                     if (parameters.TryGetValue(paramName, out ParamValue paramValue))
                     {
+                        // המרת JsonElement לסוג הנכון לפני העברה לפרוצדורה
+                        object convertedValue = ConvertJsonElementToSqlType(paramValue.Value, paramValue.Type);
+                        
                         dynamicParams.Add(
                             procParam.Name, // שם הפרמטר כפי שמוגדר בפרוצדורה
-                            paramValue.Value ?? DBNull.Value,
+                            convertedValue,
                             paramValue.Type);
                     }
                     else if (!procParam.IsOptional)
