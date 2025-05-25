@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "Kv9G/3X5vDq3qWZY3JfMbLwz8n1dx2n26I+z557PmUY=",
+  "Source": "ReportGenerator.Api",
+  "BasePath": "_content/ReportGenerator.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
