@@ -57,14 +57,15 @@ namespace ReportGenerator.Core.Management.Services
         }
 
         /// <summary>
-        /// יוצר קובץ פלט לפי הפורמט המבוקש
+        /// יוצר קובץ פלט לפי הפורמט המבוקש ללא שמירה
         /// </summary>
-        public async Task<byte[]> CreateOutput(
+        public async Task<byte[]> CreateOutputBytesOnly(
             string reportName, 
             string reportTitle, 
             OutputFormat format,
             Dictionary<string, System.Data.DataTable> dataTables, 
-            Dictionary<string, ParamValue> parameters, bool WithStatistics = false)
+            Dictionary<string, ParamValue> parameters, 
+            bool WithStatistics = false)
         {
             if (format == OutputFormat.PDF)
             {
@@ -94,14 +95,28 @@ namespace ReportGenerator.Core.Management.Services
         }
 
         /// <summary>
-        /// שומר את הדוח לקובץ פיזי בדיסק
+        /// יוצר קובץ פלט לפי הפורמט המבוקש (פונקציה קיימת לתאימות)
         /// </summary>
-        public void SaveReportToFile(string reportName, OutputFormat format, byte[] reportData)
+        [Obsolete("השתמש ב-CreateOutputBytesOnly לבהירות מלאה")]
+        public async Task<byte[]> CreateOutput(
+            string reportName, 
+            string reportTitle, 
+            OutputFormat format,
+            Dictionary<string, System.Data.DataTable> dataTables, 
+            Dictionary<string, ParamValue> parameters, bool WithStatistics = false)
+        {
+            return await CreateOutputBytesOnly(reportName, reportTitle, format, dataTables, parameters, WithStatistics);
+        }
+
+        /// <summary>
+        /// שומר את הדוח לקובץ פיזי בדיסק עם אפשרות לנתיב מותאם
+        /// </summary>
+        public void SaveReportToFile(string reportName, OutputFormat format, byte[] reportData, string? customPath = null)
         {
             try
             {
-                // שימוש בהגדרות מקובץ קונפיגורציה
-                var outputFolder = _settings.OutputFolder;
+                // שימוש בנתיב מותאם או הגדרות מקובץ קונפיגורציה
+                var outputFolder = customPath ?? _settings.OutputFolder;
                 
                 // וידוא שהתיקיות קיימות
                 Directory.CreateDirectory(outputFolder);

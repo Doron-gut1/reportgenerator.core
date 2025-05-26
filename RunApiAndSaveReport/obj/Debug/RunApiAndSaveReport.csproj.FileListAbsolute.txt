@@ -1,0 +1,10 @@
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\bin\Debug\RunApiAndSaveReport.exe.config
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\bin\Debug\RunApiAndSaveReport.exe
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\bin\Debug\RunApiAndSaveReport.pdb
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\bin\Debug\Newtonsoft.Json.dll
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\bin\Debug\Newtonsoft.Json.xml
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\obj\Debug\RunApiAndSaveReport.csproj.AssemblyReference.cache
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\obj\Debug\RunApiAndSaveReport.csproj.CoreCompileInputs.cache
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\obj\Debug\RunApiAn.A9B6787F.Up2Date
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\obj\Debug\RunApiAndSaveReport.exe
+C:\doron\TFS\gloabl projects\ReportGenerator.Core\RunApiAndSaveReport\obj\Debug\RunApiAndSaveReport.pdb

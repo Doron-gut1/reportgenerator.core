@@ -81,13 +81,13 @@ namespace ReportGenerator.Core.Management
         }
 
         /// <summary>
-        /// מייצר דוח לפי שם, פורמט ופרמטרים
+        /// מייצר דוח ומחזיר bytes בלבד - ללא שמירה לדיסק
         /// </summary>
         /// <param name="reportName">שם הדוח</param>
         /// <param name="format">פורמט הפלט (PDF/Excel)</param>
         /// <param name="parameters">פרמטרים לדוח</param>
         /// <returns>מערך בייטים של הקובץ המבוקש</returns>
-        public async Task<byte[]> GenerateReport(string reportName, OutputFormat format, params object[] parameters)
+        public async Task<byte[]> GenerateReportBytesOnly(string reportName, OutputFormat format, params object[] parameters)
         {
             // ניקוי שגיאות מהפקות קודמות
             _errorManager.ClearErrors();
@@ -112,8 +112,8 @@ namespace ReportGenerator.Core.Management
                 // 3. הרצת הדוח
                 var (reportConfig, dataTables) = await _reportExecutor.ExecuteReport(reportName, parsedParams);
 
-                // 4. יצירת פלט
-                byte[] result = await _outputManager.CreateOutput(
+                // 4. יצירת פלט ללא שמירה
+                byte[] result = await _outputManager.CreateOutputBytesOnly(
                     reportName,
                     reportConfig.Title,
                     format,
@@ -124,7 +124,7 @@ namespace ReportGenerator.Core.Management
                 var duration = DateTime.Now - startTime;
                 _errorManager.LogInfo(
                     ErrorCode.General_Info,
-                    $"הפקת דוח {reportName} הסתיימה בהצלחה בפורמט {format}. " +
+                    $"הפקת דוח {reportName} (bytes only) הסתיימה בהצלחה בפורמט {format}. " +
                     $"משך: {duration.TotalSeconds:F2} שניות. גודל: {result.Length / 1024:N0} KB",
                     reportName: reportName);
 
@@ -135,11 +135,58 @@ namespace ReportGenerator.Core.Management
                 // במקרה של שגיאה, רשום אותה ופרטים נוספים
                 _errorManager.LogCriticalError(
                     ErrorCode.Report_Generation_Failed,
-                    $"שגיאה בהפקת דוח {reportName}",
+                    $"שגיאה בהפקת דוח {reportName} (bytes only)",
                     ex,
                     reportName: reportName);
 
-                throw new Exception($"Error generating report {reportName}: {ex.Message}", ex);
+                throw new Exception($"Error generating report {reportName} (bytes only): {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// מייצר דוח, שומר לדיסק, ומחזיר bytes
+        /// </summary>
+        /// <param name="reportName">שם הדוח</param>
+        /// <param name="format">פורמט הפלט (PDF/Excel)</param>
+        /// <param name="savePath">נתיב שמירה מותאם (אופציונלי)</param>
+        /// <param name="parameters">פרמטרים לדוח</param>
+        /// <returns>מערך בייטים של הקובץ המבוקש</returns>
+        public async Task<byte[]> GenerateReportAndSave(string reportName, OutputFormat format, string? savePath = null, params object[] parameters)
+        {
+            // הפקה ללא שמירה
+            byte[] result = await GenerateReportBytesOnly(reportName, format, parameters);
+            
+            // שמירה מפורשת
+            _outputManager.SaveReportToFile(reportName, format, result, savePath);
+            
+            _errorManager.LogInfo(
+                ErrorCode.General_Info,
+                $"הדוח {reportName} הופק ונשמר בהצלחה בנתיב: {savePath ?? _settings.OutputFolder}",
+                reportName: reportName);
+            
+            return result;
+        }
+
+        /// <summary>
+        /// מייצר דוח לפי שם, פורמט ופרמטרים
+        /// הפונקציה הקיימת - נשמרת לתאימות אחורה
+        /// מתנהגת לפי הגדרות הקונפיגורציה (SaveOutputFiles)
+        /// </summary>
+        /// <param name="reportName">שם הדוח</param>
+        /// <param name="format">פורמט הפלט (PDF/Excel)</param>
+        /// <param name="parameters">פרמטרים לדוח</param>
+        /// <returns>מערך בייטים של הקובץ המבוקש</returns>
+        [Obsolete("השתמש ב-GenerateReportBytesOnly או GenerateReportAndSave לבהירות מלאה")]
+        public async Task<byte[]> GenerateReport(string reportName, OutputFormat format, params object[] parameters)
+        {
+            // הקוד הקיים - נשמר לתאימות אחורה
+            if (_settings.SaveOutputFiles)
+            {
+                return await GenerateReportAndSave(reportName, format, null, parameters);
+            }
+            else
+            {
+                return await GenerateReportBytesOnly(reportName, format, parameters);
             }
         }
     }

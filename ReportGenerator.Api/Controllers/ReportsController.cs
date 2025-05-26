@@ -57,18 +57,15 @@ namespace ReportGenerator.Api.Controllers
                 var outputFormat = _parameterConverter.ConvertOutputFormat(request.OutputFormat);
                 var parameters = _parameterConverter.ConvertRequestParameters(request.Parameters);
 
-                // הפקת הדוח
-                var result = await _reportGenerator.GenerateReport(
+                // הפקת הדוח עם שמירה מפורשת (כבר כולל שמירה)
+                var result = await _reportGenerator.GenerateReportAndSave(
                     request.ReportName,
                     outputFormat,
+                    null, // שימוש בנתיב ברירת מחדל
                     parameters);
 
-                // שמירת הקובץ (אם מוגדר)
-                _fileSystemService.SaveOutputFile(
-                    result, 
-                    request.ReportName, 
-                    request.DepartmentId, 
-                    request.OutputFormat);
+                // הערה: השמירה כבר בוצעה ב-GenerateReportAndSave
+                // אין צורך בשמירה נוספת כדי למנוע כפילות
 
                 // קביעת סוג התוכן לפי הפורמט
                 string contentType = request.OutputFormat.ToLower() == "pdf" ?
@@ -95,6 +92,61 @@ namespace ReportGenerator.Api.Controllers
                 // החזרת שגיאה כללית
                 return StatusCode(StatusCodes.Status500InternalServerError, 
                     new { error = "שגיאה בהפקת הדוח", details = ex.Message });
+            }
+        }
+        
+        /// <summary>
+        /// מפיק דוח ומחזיר raw bytes (עבור EXE clients)
+        /// </summary>
+        /// <param name="request">בקשה להפקת דוח</param>
+        /// <returns>Raw bytes של קובץ PDF או Excel</returns>
+        [HttpPost("generate-bytes")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GenerateReportBytes([FromBody] GenerateReportRequest request)
+        {
+            _logger.LogInformation("התקבלה בקשה להפקת דוח (bytes) {ReportName}, מחלקה: {DepartmentId}", 
+                request.ReportName, request.DepartmentId ?? "ברירת מחדל");
+
+            try
+            {
+                // בדיקת תקינות המחלקה (אם התקבלה)
+                if (!string.IsNullOrEmpty(request.DepartmentId) && !_fileSystemService.IsValidDepartment(request.DepartmentId))
+                {
+                    return BadRequest(new { error = $"מחלקה {request.DepartmentId} אינה תקפה" });
+                }
+
+                // המרת פרמטרים
+                var outputFormat = _parameterConverter.ConvertOutputFormat(request.OutputFormat);
+                var parameters = _parameterConverter.ConvertRequestParameters(request.Parameters);
+
+                // הפקת הדוח ללא שמירה
+                var result = await _reportGenerator.GenerateReportBytesOnly(
+                    request.ReportName,
+                    outputFormat,
+                    parameters);
+
+                // קביעת סוג התוכן לפי הפורמט
+                string contentType = request.OutputFormat.ToLower() == "pdf" ?
+                    "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+                // החזרת raw bytes בלבד
+                return File(result, contentType);
+            }
+            catch (Exception ex)
+            {
+                // רישום השגיאה למערכת הניהול שגיאות
+                _logger.LogError(ex, "שגיאה בהפקת דוח {ReportName}", request.ReportName);
+
+                // בדיקה אם זו שגיאה מוכרת
+                if (ex is ReportNotFoundException)
+                {
+                    return NotFound();
+                }
+
+                // החזרת שגיאה כללית - הEXE יבדוק לפי status code
+                return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
         
