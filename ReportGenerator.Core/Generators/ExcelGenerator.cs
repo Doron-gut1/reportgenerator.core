@@ -5,11 +5,11 @@ using System.Drawing;
 using OfficeOpenXml;
 using OfficeOpenXml.Drawing.Chart;
 using OfficeOpenXml.Style;
-using ReportGenerator.Core.Interfaces;
+
 
 namespace ReportGenerator.Core.Generators
 {
-    public class ExcelGenerator : IExcelGenerator
+    public class ExcelGenerator
     {
         private readonly Dictionary<string, string> _columnMappings;
         private readonly List<string> _hiddenColumns = new List<string> { "IsSummary" };

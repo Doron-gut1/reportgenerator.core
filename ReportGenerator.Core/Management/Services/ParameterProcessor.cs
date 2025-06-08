@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using ReportGenerator.Core.Data;
 using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
-using ReportGenerator.Core.Interfaces;
+
 
 namespace ReportGenerator.Core.Management.Services
 {
@@ -14,16 +15,14 @@ namespace ReportGenerator.Core.Management.Services
     /// </summary>
     internal class ParameterProcessor
     {
-        private readonly IDataAccess _dataAccess;
-        private readonly IErrorManager _errorManager;
+        private readonly DataAccess _dataAccess;
 
         /// <summary>
         /// יוצר מעבד פרמטרים חדש
         /// </summary>
-        public ParameterProcessor(IDataAccess dataAccess, IErrorManager errorManager)
+        public ParameterProcessor(DataAccess dataAccess)
         {
             _dataAccess = dataAccess ?? throw new ArgumentNullException(nameof(dataAccess));
-            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
         }
 
         /// <summary>
@@ -59,10 +58,7 @@ namespace ReportGenerator.Core.Management.Services
                     {
                         if (i + 2 >= paramArray.Length)
                         {
-                            _errorManager.LogError(
-                                ErrorCode.Parameters_Invalid,
-                                ErrorSeverity.Error,
-                                $"מערך הפרמטרים אינו בפורמט הנכון");
+                            SimpleLogger.LogError( $"מערך הפרמטרים אינו בפורמט הנכון");
                             throw new ArgumentException("Parameter array is not in the correct format");
                         }
 
@@ -70,10 +66,7 @@ namespace ReportGenerator.Core.Management.Services
                         string paramName = paramArray[i]?.ToString();
                         if (string.IsNullOrEmpty(paramName))
                         {
-                            _errorManager.LogError(
-                                ErrorCode.Parameters_Invalid,
-                                ErrorSeverity.Error,
-                                $"שם פרמטר במיקום {i} הוא null או ריק");
+                            SimpleLogger.LogError($"שם פרמטר במיקום {i} הוא null או ריק");
                             throw new ArgumentException($"Parameter name at position {i} is null or empty");
                         }
 
@@ -99,10 +92,7 @@ namespace ReportGenerator.Core.Management.Services
                             }
                             catch (Exception ex)
                             {
-                                _errorManager.LogError(
-                                    ErrorCode.Parameters_Type_Mismatch,
-                                    ErrorSeverity.Error,
-                                    $"סוג הפרמטר במיקום {i + 2} אינו DbType תקין: {dbTypeObject}",
+                                SimpleLogger.LogError( $"סוג הפרמטר במיקום {i + 2} אינו DbType תקין: {dbTypeObject}",
                                     ex);
                                 throw new ArgumentException($"Parameter type at position {i + 2} is not a valid DbType: {dbTypeObject}", ex);
                             }
@@ -117,11 +107,7 @@ namespace ReportGenerator.Core.Management.Services
             }
             catch (Exception ex) when (!(ex is ArgumentException))
             {
-                _errorManager.LogError(
-                    ErrorCode.Parameters_Invalid,
-                    ErrorSeverity.Error,
-                    "שגיאה בניתוח מערך הפרמטרים",
-                    ex);
+                SimpleLogger.LogError("שגיאה בניתוח מערך הפרמטרים",ex);
                 throw new ArgumentException("Error parsing parameters array", ex);
             }
         }
@@ -178,10 +164,7 @@ namespace ReportGenerator.Core.Management.Services
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Parameters_Missing,
-                    $"לא ניתן להוסיף פרמטרים חסרים לפרוצדורה {procName}: {ex.Message}",
-                    ex);
+                SimpleLogger.LogWarning( $"לא ניתן להוסיף פרמטרים חסרים לפרוצדורה {procName}: {ex.Message}", procName, ex.Message);
             }
         }
 
@@ -203,10 +186,7 @@ namespace ReportGenerator.Core.Management.Services
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.Parameters_Invalid,
-                    "שגיאה בעיבוד פרמטרים מיוחדים",
-                    ex);
+                SimpleLogger.LogError("שגיאה בעיבוד פרמטרים מיוחדים",ex);
 
                 return parameters;
             }
@@ -221,9 +201,7 @@ namespace ReportGenerator.Core.Management.Services
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Parameters_Invalid,
-                    $"שגיאה בעיבוד פרמטר מועצה: {ex.Message}");
+                SimpleLogger.LogWarning( $"שגיאה בעיבוד פרמטר מועצה: {ex.Message}");
             }
         }
 
@@ -249,9 +227,7 @@ namespace ReportGenerator.Core.Management.Services
                 }
                 catch (Exception ex)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.Parameters_Invalid,
-                        $"שגיאה בעיבוד פרמטר חודש (mnt): {ex.Message}");
+                    SimpleLogger.LogWarning($"שגיאה בעיבוד פרמטר חודש (mnt): {ex.Message}");
                 }
             }
         }
@@ -272,9 +248,7 @@ namespace ReportGenerator.Core.Management.Services
                 }
                 catch (Exception ex)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.Parameters_Invalid,
-                        $"שגיאה בעיבוד פרמטר סוג חיוב (sugts): {ex.Message}");
+                    SimpleLogger.LogWarning($"שגיאה בעיבוד פרמטר סוג חיוב (sugts): {ex.Message}");
                 }
             }
             else if (parameters.TryGetValue("sugtslist", out ParamValue sugtsListParam) && sugtsListParam.Value != null)
@@ -305,9 +279,7 @@ namespace ReportGenerator.Core.Management.Services
                 }
                 catch (Exception ex)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.Parameters_Invalid,
-                        $"שגיאה בעיבוד פרמטר רשימת סוגי חיוב (sugtslist): {ex.Message}");
+                    SimpleLogger.LogWarning( $"שגיאה בעיבוד פרמטר רשימת סוגי חיוב (sugtslist): {ex.Message}");
                 }
             }
             else
@@ -349,9 +321,7 @@ namespace ReportGenerator.Core.Management.Services
                 }
                 catch (Exception ex)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.Parameters_Invalid,
-                        $"שגיאה בעיבוד פרמטר יישוב (isvkod): {ex.Message}");
+                    SimpleLogger.LogWarning( $"שגיאה בעיבוד פרמטר יישוב (isvkod): {ex.Message}");
                 }
             }
             else

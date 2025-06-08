@@ -18,12 +18,12 @@ namespace ReportGenerator.Core.Configuration
         /// <summary>
         /// נתיב לתיקיית לוגים
         /// </summary>
-        public string LogsFolder { get; set; } = string.Empty;
+       // public string LogsFolder { get; set; } = "c:\temp";
 
         /// <summary>
         /// נתיב להפעלת כרום (אופציונלי)
         /// </summary>
-        public string ChromePath { get; set; } = string.Empty;
+        public string ChromePath { get; set; } = @"C:\Program Files\Google\Chrome\Application";
 
         /// <summary>
         /// מחרוזת התחברות לבסיס הנתונים
@@ -33,6 +33,6 @@ namespace ReportGenerator.Core.Configuration
         /// <summary>
         /// האם להשתמש בהורדה אוטומטית של כרום
         /// </summary>
-        public bool AutoDownloadChrome { get; set; } = true;
+        public bool AutoDownloadChrome { get; set; } = false;
     }
 }

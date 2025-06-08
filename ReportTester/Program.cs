@@ -31,12 +31,12 @@ class Program
             Console.WriteLine($"Output folder: {outputPath}");
 
             // שם הדוח להפקה
-            string reportName = "TrfbysugtsSummaryReport";
+            string reportName = "kabalarep";
             OutputFormat outFormat = OutputFormat.PDF;
 
             // פרמטרים לדוח
             var parameters = new object[] {
-                "mnt", 275, DbType.Int32
+                "kabalanum", 732196900, DbType.Int32
             };
 
             // יצירת ReportManager באמצעות Factory
@@ -44,7 +44,8 @@ class Program
             var reportManager = ReportManagerFactory.CreateReportManager(
                 connectionString,  // מחרוזת חיבור 
                 templatePath,      // תיקיית תבניות
-                outputPath         // תיקיית פלט
+                outputPath     // תיקיית פלט'
+               
             );
 
             Console.WriteLine("\nיוצר את הדוח בפורמט אקסל...");

@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using HandlebarsDotNet;
 using ReportGenerator.Core.Errors;
-using ReportGenerator.Core.Interfaces;
+
 
 namespace ReportGenerator.Core.Generators
 {
@@ -15,11 +15,10 @@ namespace ReportGenerator.Core.Generators
     /// מעבד תבניות HTML - אחראי על עיבוד תבניות והחלפת פלייסהולדרים בערכים אמיתיים
     /// גרסה משופרת עם תמיכה בקישינג.
     /// </summary>
-    public class HtmlTemplateProcessor : ITemplateProcessor
+    public class HtmlTemplateProcessor
     {
         private readonly Dictionary<string, string> _columnMappings;
         private readonly IHandlebars _handlebars;
-        private readonly IErrorManager _errorManager;
         
         // מילון פשוט לשמירת תבניות מקומפלות
         private readonly Dictionary<int, HandlebarsTemplate<object, object>> _templateCache;
@@ -27,33 +26,11 @@ namespace ReportGenerator.Core.Generators
         /// <summary>
         /// יוצר מופע חדש של מעבד תבניות
         /// </summary>
-        /// <param name="columnMappings">מילון המיפויים בין שמות עמודות באנגלית לעברית</param>
-        /// <param name="errorManager">מנהל שגיאות מוזרק</param>
-        public HtmlTemplateProcessor(IDataAccess dataAccess, IErrorManager errorManager)
+        /// <param name="errorManager">מנהל שגיאות</param>
+        public HtmlTemplateProcessor()
         {
-            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
+            _columnMappings = new Dictionary<string, string>();
 
-            // קבלת מיפויים דרך DataAccess במקום הזרקה ישירה של Dictionary
-            _columnMappings = dataAccess?.GetDefaultColumnMappings()?.Result
-                ?? new Dictionary<string, string>();
-
-            // מילון לקישינג תבניות
-            _templateCache = new Dictionary<int, HandlebarsTemplate<object, object>>();
-
-            // אתחול מנוע Handlebars
-            _handlebars = Handlebars.Create(new HandlebarsConfiguration
-            {
-                NoEscape = true // מניעת אסקייפינג של HTML
-            });
-
-            RegisterHandlebarsHelpers();
-        }
-
-        public HtmlTemplateProcessor(Dictionary<string, string> columnMappings, IErrorManager errorManager)
-        {
-            _columnMappings = columnMappings ?? new Dictionary<string, string>();
-            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
-            
             // מילון לקישינג תבניות
             _templateCache = new Dictionary<int, HandlebarsTemplate<object, object>>();
 
@@ -67,11 +44,36 @@ namespace ReportGenerator.Core.Generators
         }
 
         /// <summary>
+        /// פונקציה לעדכון מיפויי העמודות
+        /// </summary>
+        public void SetColumnMappings(Dictionary<string, string> columnMappings)
+        {
+            if (columnMappings != null)
+            {
+                _columnMappings.Clear();
+                foreach (var mapping in columnMappings)
+                {
+                    _columnMappings[mapping.Key] = mapping.Value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// קבלת מיפויי העמודות הנוכחיים
+        /// </summary>
+        public Dictionary<string, string> GetColumnMappings()
+        {
+            return new Dictionary<string, string>(_columnMappings);
+        }
+
+        /// <summary>
         /// רישום הלפרים ל-Handlebars
         /// </summary>
         private void RegisterHandlebarsHelpers()
         {
-            // רישום הלפר לפורמט מספרים
+            // ========== HELPERS לפורמט והצגה ==========
+
+            // רישום הלפר לפורמט מספרים (קיים)
             _handlebars.RegisterHelper("format", (writer, context, parameters) => {
                 if (parameters.Length > 0 && parameters[0] != null)
                 {
@@ -79,13 +81,52 @@ namespace ReportGenerator.Core.Generators
                 }
             });
 
-            // הלפר להשוואת ערכים
+            // הלפר לפורמט מספרים עם אפשרות לפורמט מותאם אישית
+            _handlebars.RegisterHelper("formatNumber", (writer, context, parameters) =>
+            {
+                if (parameters.Length >= 1 && decimal.TryParse(parameters[0]?.ToString(), out decimal number))
+                {
+                    string format = parameters.Length > 1 ? parameters[1].ToString() : "N2";
+                    writer.WriteSafeString(number.ToString(format));
+                }
+                else
+                {
+                    writer.WriteSafeString(parameters[0]?.ToString() ?? "");
+                }
+            });
+
+            // הלפר לפורמט תאריכים
+            _handlebars.RegisterHelper("formatDate", (writer, context, parameters) =>
+            {
+                if (parameters.Length >= 1 && DateTime.TryParse(parameters[0]?.ToString(), out DateTime date))
+                {
+                    string format = parameters.Length > 1 ? parameters[1].ToString() : "dd/MM/yyyy";
+                    writer.WriteSafeString(date.ToString(format));
+                }
+                else
+                {
+                    writer.WriteSafeString(parameters[0]?.ToString() ?? "");
+                }
+            });
+
+            // הלפר לקבלת שם עברי של עמודה (קיים)
+            _handlebars.RegisterHelper("header", (writer, context, parameters) => {
+                if (parameters.Length > 0 && parameters[0] != null)
+                {
+                    string columnName = parameters[0].ToString();
+                    writer.Write(GetHebrewName(columnName, null));
+                }
+            });
+
+            // ========== HELPERS להשוואות ==========
+
+            // הלפר להשוואת ערכים - גרסה משופרת (משלב את הקיים)
             _handlebars.RegisterHelper("eq", (writer, options, context, arguments) => {
                 if (arguments.Length >= 2)
                 {
                     // השוואה עבור ערכים מספריים
-                    if (int.TryParse(arguments[0]?.ToString(), out int val1) && 
-                        int.TryParse(arguments[1]?.ToString(), out int val2))
+                    if (decimal.TryParse(arguments[0]?.ToString(), out decimal val1) &&
+                        decimal.TryParse(arguments[1]?.ToString(), out decimal val2))
                     {
                         if (val1 == val2)
                         {
@@ -97,11 +138,26 @@ namespace ReportGenerator.Core.Generators
                         }
                         return;
                     }
-                    
+
+                    // השוואת בוליאנים
+                    if (bool.TryParse(arguments[0]?.ToString(), out bool bool1) &&
+                        bool.TryParse(arguments[1]?.ToString(), out bool bool2))
+                    {
+                        if (bool1 == bool2)
+                        {
+                            options.Template(writer, context);
+                        }
+                        else
+                        {
+                            options.Inverse(writer, context);
+                        }
+                        return;
+                    }
+
                     // השוואת מחרוזות
                     string str1 = arguments[0]?.ToString() ?? string.Empty;
                     string str2 = arguments[1]?.ToString() ?? string.Empty;
-                    
+
                     if (str1.Equals(str2, StringComparison.OrdinalIgnoreCase))
                     {
                         options.Template(writer, context);
@@ -113,9 +169,118 @@ namespace ReportGenerator.Core.Generators
                 }
             });
 
-            // הלפר לבדיקת האם ערך גדול מאפס
+            // Helper לאי-שוויון
+            _handlebars.RegisterHelper("neq", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 2)
+                {
+                    // השוואה עבור ערכים מספריים
+                    if (decimal.TryParse(arguments[0]?.ToString(), out decimal val1) &&
+                        decimal.TryParse(arguments[1]?.ToString(), out decimal val2))
+                    {
+                        if (val1 != val2)
+                        {
+                            options.Template(writer, context);
+                        }
+                        else
+                        {
+                            options.Inverse(writer, context);
+                        }
+                        return;
+                    }
+
+                    // השוואת מחרוזות
+                    string str1 = arguments[0]?.ToString() ?? string.Empty;
+                    string str2 = arguments[1]?.ToString() ?? string.Empty;
+
+                    if (!str1.Equals(str2, StringComparison.OrdinalIgnoreCase))
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // Helper לגדול מ
+            _handlebars.RegisterHelper("gt", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 2 &&
+                    decimal.TryParse(arguments[0]?.ToString(), out decimal num1) &&
+                    decimal.TryParse(arguments[1]?.ToString(), out decimal num2))
+                {
+                    if (num1 > num2)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // Helper לקטן מ
+            _handlebars.RegisterHelper("lt", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 2 &&
+                    decimal.TryParse(arguments[0]?.ToString(), out decimal num1) &&
+                    decimal.TryParse(arguments[1]?.ToString(), out decimal num2))
+                {
+                    if (num1 < num2)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // Helper לגדול או שווה
+            _handlebars.RegisterHelper("gte", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 2 &&
+                    decimal.TryParse(arguments[0]?.ToString(), out decimal num1) &&
+                    decimal.TryParse(arguments[1]?.ToString(), out decimal num2))
+                {
+                    if (num1 >= num2)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // Helper לקטן או שווה
+            _handlebars.RegisterHelper("lte", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 2 &&
+                    decimal.TryParse(arguments[0]?.ToString(), out decimal num1) &&
+                    decimal.TryParse(arguments[1]?.ToString(), out decimal num2))
+                {
+                    if (num1 <= num2)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // ========== HELPERS לבדיקות מיוחדות ==========
+
+            // הלפר לבדיקת האם ערך שונה מאפס (קיים)
             _handlebars.RegisterHelper("notEqualZero", (writer, options, context, arguments) => {
-                if (arguments.Length > 0 && arguments[0] != null && int.TryParse(arguments[0].ToString(), out int value))
+                if (arguments.Length > 0 && arguments[0] != null && decimal.TryParse(arguments[0].ToString(), out decimal value))
                 {
                     if (value != 0)
                     {
@@ -127,20 +292,20 @@ namespace ReportGenerator.Core.Generators
                     }
                 }
             });
-            
-            // הלפר לבדיקת האם ערך הוא שורת סיכום
+
+            // הלפר לבדיקת האם ערך הוא שורת סיכום (קיים)
             _handlebars.RegisterHelper("isSummary", (writer, options, context, arguments) => {
                 if (arguments.Length > 0 && arguments[0] != null)
                 {
                     var value = arguments[0];
                     bool isSummaryRow = false;
-                    
+
                     // בדיקה אם זו שורת סיכום (לפי מספר או שדה isSummary)
                     if (int.TryParse(value.ToString(), out int intValue) && (intValue == -1 || intValue == 1))
                     {
                         isSummaryRow = true;
                     }
-                    
+
                     if (isSummaryRow)
                     {
                         options.Template(writer, context);
@@ -155,8 +320,8 @@ namespace ReportGenerator.Core.Generators
                     options.Inverse(writer, context);
                 }
             });
-            
-            // הלפר ספציפי לתמיכה באחורה בeqIsSummary
+
+            // הלפר ספציפי לתמיכה באחורה בeqIsSummary (קיים)
             _handlebars.RegisterHelper("eqIsSummary", (writer, options, context, arguments) => {
                 if (arguments.Length > 0 && arguments[0] != null)
                 {
@@ -175,12 +340,104 @@ namespace ReportGenerator.Core.Generators
                 }
             });
 
-            // הלפר לקבלת שם עברי של עמודה
-            _handlebars.RegisterHelper("header", (writer, context, parameters) => {
-                if (parameters.Length > 0 && parameters[0] != null)
+            // Helper לבדיקת ערך ריק
+            _handlebars.RegisterHelper("isEmpty", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 1)
                 {
-                    string columnName = parameters[0].ToString();
-                    writer.Write(GetHebrewName(columnName, null));
+                    var value = arguments[0];
+                    bool isEmpty = value == null ||
+                                  string.IsNullOrWhiteSpace(value.ToString()) ||
+                                  (value.ToString() == "0");
+
+                    if (isEmpty)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // ========== HELPERS ללוגיקה ==========
+
+            // Helper ללוגיקת AND
+            _handlebars.RegisterHelper("and", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 2)
+                {
+                    bool result = true;
+                    foreach (var arg in arguments)
+                    {
+                        if (string.IsNullOrEmpty(arg?.ToString()) ||
+                            arg.ToString() == "false" ||
+                            arg.ToString() == "0")
+                        {
+                            result = false;
+                            break;
+                        }
+                    }
+
+                    if (result)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // Helper ללוגיקת OR
+            _handlebars.RegisterHelper("or", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 2)
+                {
+                    bool result = false;
+                    foreach (var arg in arguments)
+                    {
+                        if (!string.IsNullOrEmpty(arg?.ToString()) &&
+                            arg.ToString() != "false" &&
+                            arg.ToString() != "0")
+                        {
+                            result = true;
+                            break;
+                        }
+                    }
+
+                    if (result)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
+                }
+            });
+
+            // Helper לשלילה (NOT)
+            _handlebars.RegisterHelper("not", (writer, options, context, arguments) =>
+            {
+                if (arguments.Length >= 1)
+                {
+                    var value = arguments[0];
+                    bool isFalsy = value == null ||
+                                  string.IsNullOrEmpty(value.ToString()) ||
+                                  value.ToString() == "false" ||
+                                  value.ToString() == "0";
+
+                    if (isFalsy)
+                    {
+                        options.Template(writer, context);
+                    }
+                    else
+                    {
+                        options.Inverse(writer, context);
+                    }
                 }
             });
         }
@@ -201,10 +458,7 @@ namespace ReportGenerator.Core.Generators
             {
                 if (string.IsNullOrEmpty(template))
                 {
-                    _errorManager.LogError(
-                        ErrorCode.Template_Invalid_Format,
-                        ErrorSeverity.Critical,
-                        "תבנית HTML לא יכולה להיות ריקה");
+                    SimpleLogger.LogError("תבנית HTML לא יכולה להיות ריקה");
                     throw new ArgumentException("Template cannot be null or empty");
                 }
 
@@ -213,9 +467,7 @@ namespace ReportGenerator.Core.Generators
                 {
                     foreach (var tableEntry in dataTables)
                     {
-                        _errorManager.LogInfo(
-                            ErrorCode.General_Info, 
-                            $"טבלה {tableEntry.Key}: {tableEntry.Value.Rows.Count} שורות, {tableEntry.Value.Columns.Count} עמודות");
+                        SimpleLogger.LogInfo($"טבלה {tableEntry.Key}: {tableEntry.Value.Rows.Count} שורות, {tableEntry.Value.Columns.Count} עמודות");
                         
                         // רישום שמות העמודות
                         List<string> columnNames = new List<string>();
@@ -224,9 +476,7 @@ namespace ReportGenerator.Core.Generators
                             columnNames.Add(col.ColumnName);
                         }
                         
-                        _errorManager.LogInfo(
-                            ErrorCode.General_Info,
-                            $"עמודות בטבלה {tableEntry.Key}: {string.Join(", ", columnNames)}");
+                        SimpleLogger.LogInfo($"עמודות בטבלה {tableEntry.Key}: {string.Join(", ", columnNames)}");
                     }
                 }
 
@@ -237,9 +487,7 @@ namespace ReportGenerator.Core.Generators
                 var templateModel = PrepareTemplateModel(values, dataTables);
                 
                 // רישום דיבוג של המודל
-                _errorManager.LogInfo(
-                    ErrorCode.General_Info,
-                    $"מספר מפתחות במודל: {(templateModel as Dictionary<string, object>)?.Count ?? 0}");
+                SimpleLogger.LogInfo($"מספר מפתחות במודל: {(templateModel as Dictionary<string, object>)?.Count ?? 0}");
                 
                 List<string> modelKeys = new List<string>();
                 if (templateModel is Dictionary<string, object> modelDict)
@@ -250,9 +498,7 @@ namespace ReportGenerator.Core.Generators
                     }
                 }
                 
-                _errorManager.LogInfo(
-                    ErrorCode.General_Info,
-                    $"מפתחות במודל: {string.Join(", ", modelKeys)}");
+                SimpleLogger.LogInfo( $"מפתחות במודל: {string.Join(", ", modelKeys)}");
                 
                 // שימוש ב-cache key המבוסס על תבנית
                 int cacheKey = processedTemplate.GetHashCode();
@@ -282,9 +528,7 @@ namespace ReportGenerator.Core.Generators
                             );
                             
                             // ניסיון בCompilation החדש
-                            _errorManager.LogWarning(
-                                ErrorCode.Template_Condition_Invalid,
-                                $"תיקון אוטומטי של תחביר תנאי:  {ex.Message}");
+                            SimpleLogger.LogWarning($"תיקון אוטומטי של תחביר תנאי:  {ex.Message}");
                                 
                             compiledTemplate = _handlebars.Compile(fixedTemplate);
                             
@@ -300,10 +544,7 @@ namespace ReportGenerator.Core.Generators
 
                     // דיבוג - רישום האם התוצאה מכילה פלייסהולדרים
                     bool containsPlaceholders = result.Contains("{{") && result.Contains("}}");
-                    _errorManager.LogInfo(
-                        ErrorCode.General_Info,
-                        containsPlaceholders
-                            ? "התוצאה עדיין מכילה פלייסהולדרים שלא הוחלפו!"
+                    SimpleLogger.LogInfo(containsPlaceholders ? "התוצאה עדיין מכילה פלייסהולדרים שלא הוחלפו!"
                             : "כל הפלייסהולדרים הוחלפו בהצלחה.");
                     
                     // 4. טיפול בפלייסהולדרים של מספור עמודים
@@ -312,11 +553,7 @@ namespace ReportGenerator.Core.Generators
                     return result;
                 }
                 catch (Exception ex) {
-                    _errorManager.LogError(
-                        ErrorCode.Template_Processing_Failed,
-                        ErrorSeverity.Error,
-                        $"שגיאה בעיבוד התבנית: {ex.Message}",
-                        ex);
+                    SimpleLogger.LogError($"שגיאה בעיבוד התבנית: {ex.Message}", ex);
                     
                     // במקרה של שגיאה בעיבוד התבנית, ננסה לעבד את התבנית ללא תבניות דינמיות
                     // ורק עם פלייסהולדרים פשוטים
@@ -325,11 +562,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex) when (!(ex is ArgumentException))
             {
-                _errorManager.LogError(
-                    ErrorCode.Template_Processing_Failed,
-                    ErrorSeverity.Critical,
-                    "שגיאה בעיבוד תבנית HTML",
-                    ex);
+                SimpleLogger.LogError( "שגיאה בעיבוד תבנית HTML", ex);
                 throw new Exception("Error processing HTML template", ex);
             }
         }
@@ -344,9 +577,7 @@ namespace ReportGenerator.Core.Generators
         {
             try
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Template_Processing_Failed,
-                    "שימוש בעיבוד גיבוי פשוט (ללא Handlebars)");
+                SimpleLogger.LogWarning("שימוש בעיבוד גיבוי פשוט (ללא Handlebars)");
 
                 // 1. החלפת פלייסהולדרים פשוטים
                 string result = ProcessSimplePlaceholders(template, values);
@@ -364,11 +595,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.Template_Processing_Failed,
-                    ErrorSeverity.Error,
-                    "גם עיבוד הגיבוי נכשל",
-                    ex);
+                SimpleLogger.LogError( "גם עיבוד הגיבוי נכשל", ex);
                 return template; // החזרת התבנית המקורית
             }
         }
@@ -462,9 +689,7 @@ namespace ReportGenerator.Core.Generators
         if (table == null || table.Rows.Count == 0)
         {
         // אין נתונים
-        _errorManager.LogWarning(
-        ErrorCode.Template_Table_Row_Missing,
-        $"לא נמצאו נתונים לטבלה: {tableName}");
+        SimpleLogger.LogWarning($"לא נמצאו נתונים לטבלה: {tableName}");
         continue;
         }
         
@@ -520,10 +745,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Template_Processing_Failed,
-                    "שגיאה בעיבוד כותרות",
-                    ex);
+                SimpleLogger.LogWarning("שגיאה בעיבוד כותרות", template,ex.Message);
                 return template;
             }
         }
@@ -560,9 +782,7 @@ namespace ReportGenerator.Core.Generators
                     // אם אין נתונים, הוסף רשימה ריקה כדי שההלפרים יעבדו
                     if (table.Count == 0)
                     {
-                        _errorManager.LogWarning(
-                            ErrorCode.Template_Table_Row_Missing,
-                            $"אין נתונים בטבלה {tableKey} - יצירת רשומה ריקה כדי שההלפרים יעבדו.");
+                        SimpleLogger.LogWarning( $"אין נתונים בטבלה {tableKey} - יצירת רשומה ריקה כדי שההלפרים יעבדו.");
                             
                         var emptyItem = new Dictionary<string, object>();
                         foreach (DataColumn col in tableEntry.Value.Columns)
@@ -573,9 +793,7 @@ namespace ReportGenerator.Core.Generators
                     }
                     
                     // רישום דיבוג של הנתונים המומרים
-                    _errorManager.LogInfo(
-                        ErrorCode.General_Info,
-                        $"טבלה {tableKey} לאחר המרה: {table.Count} רשומות");
+                    SimpleLogger.LogInfo( $"טבלה {tableKey} לאחר המרה: {table.Count} רשומות");
                         
                     if (table.Count > 0)
                     {
@@ -586,9 +804,7 @@ namespace ReportGenerator.Core.Generators
                             keys.Add(key);
                         }
                         
-                        _errorManager.LogInfo(
-                            ErrorCode.General_Info,
-                            $"שדות ברשומה ראשונה של {tableKey}: {string.Join(", ", keys)}");
+                        SimpleLogger.LogInfo( $"שדות ברשומה ראשונה של {tableKey}: {string.Join(", ", keys)}");
                     }
                     
                     // אחסון במודל - שינוי: עכשיו נשמור גם ברמת השדות בודדים וגם כרשימה
@@ -684,10 +900,8 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Template_Missing_Placeholder,
-                    $"שגיאה בקבלת שם עברי לעמודה {columnName}",
-                    ex);
+                SimpleLogger.LogWarning($"שגיאה בקבלת שם עברי לעמודה {columnName}",ex.Message, columnName);
+
                 return columnName; // במקרה של שגיאה, החזרת השם המקורי
             }
         }
@@ -707,10 +921,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Template_Processing_Failed,
-                    "שגיאה בעיבוד פלייסהולדרים של מספרי עמודים",
-                    ex);
+                SimpleLogger.LogWarning("שגיאה בעיבוד פלייסהולדרים של מספרי עמודים", template, ex.Message);
                 return template;
             }
         }

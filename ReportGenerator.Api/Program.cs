@@ -1,8 +1,8 @@
 using Microsoft.OpenApi.Models;
 using ReportGenerator.Core.Configuration;
-using ReportGenerator.Core.DependencyInjection;
 using ReportGenerator.Api.Utilities;
 using ReportGenerator.Api.Services;
+using ReportGenerator.Core.Errors;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,13 +24,14 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
 builder.Configuration.AddEnvironmentVariables();
 
-// רישום שירותי מערכת הדוחות מהספרייה הקיימת
-builder.Services.AddReportGenerator(builder.Configuration);
-
-// הוספת שירותים נוספים של ה-API
+// רישום רק השירותים הנדרשים באמת
 builder.Services.AddSingleton<IParameterConverter, ParameterConverter>();
 builder.Services.AddSingleton<IFileSystemService, FileSystemService>();
-builder.Services.AddScoped<TemplateManagerAdapter>();
+
+// אתחול SimpleLogger פעם אחת בלבד
+var connectionString = builder.Configuration.GetConnectionString("ConnectionString");
+var logsFolder = Path.Combine(Path.GetTempPath(), "ReportLogs");
+SimpleLogger.Initialize(connectionString, logsFolder);
 
 var app = builder.Build();
 

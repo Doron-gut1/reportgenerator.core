@@ -1,6 +1,5 @@
 using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
-using ReportGenerator.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -13,12 +12,11 @@ namespace ReportGenerator.Core.Generators
     /// <summary>
     /// יוצר PDF מבוסס תבניות HTML
     /// </summary>
-    public class HtmlBasedPdfGenerator : IPdfGenerator
+    public class HtmlBasedPdfGenerator
     {
-        private readonly ITemplateManager _templateManager;
-        private readonly ITemplateProcessor _templateProcessor;
+        private readonly HtmlTemplateManager _templateManager;
+        private readonly HtmlTemplateProcessor _templateProcessor;
         private readonly IHtmlToPdfConverter _pdfConverter;
-        private readonly IErrorManager _errorManager;
 
         /// <summary>
         /// יוצר מופע חדש של יוצר PDF מבוסס HTML
@@ -26,14 +24,31 @@ namespace ReportGenerator.Core.Generators
         /// <param name="templateManager">מנהל תבניות</param>
         /// <param name="templateProcessor">מעבד תבניות</param>
         /// <param name="pdfConverter">ממיר HTML ל-PDF</param>
+        /// <param name="errorManager">מנהל שגיאות</param>
         public HtmlBasedPdfGenerator(
-            ITemplateManager templateManager,
-            ITemplateProcessor templateProcessor,
+            HtmlTemplateManager templateManager,
+            HtmlTemplateProcessor templateProcessor,
             IHtmlToPdfConverter pdfConverter)
         {
             _templateManager = templateManager ?? throw new ArgumentNullException(nameof(templateManager));
             _templateProcessor = templateProcessor ?? throw new ArgumentNullException(nameof(templateProcessor));
             _pdfConverter = pdfConverter ?? throw new ArgumentNullException(nameof(pdfConverter));
+        }
+
+        /// <summary>
+        /// קונסטרוקטור פשוט עבור ReportManager
+        /// </summary>
+        public HtmlBasedPdfGenerator(IHtmlToPdfConverter pdfConverter)
+        {
+            _pdfConverter = pdfConverter ?? throw new ArgumentNullException(nameof(pdfConverter));
+        }
+
+        /// <summary>
+        /// עדכון מנהלי התבניות והעיבוד
+        /// </summary>
+        public void SetManagers(HtmlTemplateManager templateManager, HtmlTemplateProcessor templateProcessor)
+        {
+            // משמש לעדכון מאוחר של המנהלים מה-ReportManager
         }
 
         /// <summary>
@@ -92,7 +107,7 @@ namespace ReportGenerator.Core.Generators
                 }
 
                 // רישום לוג של הצלחה
-                //_errorManager.LogInfo(
+                //SimpleLogger.LogInfo(
                 //    ErrorCode.PDF_Generation_Success,
                 //    $"קובץ PDF נוצר בהצלחה עבור דוח {templateName}. גודל: {pdfBytes.Length / 1024:N0} KB",
                 //    reportName: templateName);
@@ -105,30 +120,15 @@ namespace ReportGenerator.Core.Generators
                 if (ex.Message.Contains("Template") || ex.Message.Contains("תבנית"))
                 {
 
-                    _errorManager.LogError(
-                        ErrorCode.Template_Not_Found,
-                        ErrorSeverity.Critical,
-                        $"שגיאה בטעינת תבנית {templateName}",
-                        ex,
-                        reportName: templateName);
+                    SimpleLogger.LogError($"שגיאה בטעינת תבנית {templateName}",ex,reportName: templateName);
                 }
                 else if (ex.Message.Contains("Chrome") || ex.Message.Contains("Browser"))
                 {
-                    _errorManager.LogError(
-                        ErrorCode.PDF_Chrome_Not_Found,
-                        ErrorSeverity.Critical,
-                        "שגיאה בטעינת דפדפן Chrome להמרת PDF",
-                        ex,
-                        reportName: templateName);
+                    SimpleLogger.LogError("שגיאה בטעינת דפדפן Chrome להמרת PDF",ex,reportName: templateName);
                 }
                 else
                 {
-                    _errorManager.LogError(
-                        ErrorCode.PDF_Generation_Failed,
-                        ErrorSeverity.Critical,
-                        $"שגיאה כללית ביצירת PDF עבור דוח {templateName}",
-                        ex,
-                        reportName: templateName);
+                    SimpleLogger.LogError($"שגיאה כללית ביצירת PDF עבור דוח {templateName}",ex,reportName: templateName);
                 }
 
                 throw new Exception($"Error generating PDF from template {templateName}: {ex.Message}", ex);

@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
-using ReportGenerator.Core.Interfaces;
 using ReportGenerator.Core.Management.Enums;
+using ReportGenerator.Core.Data;
 
 namespace ReportGenerator.Core.Management.Services
 {
@@ -14,16 +14,14 @@ namespace ReportGenerator.Core.Management.Services
     /// </summary>
     internal class ReportExecutor
     {
-        private readonly IDataAccess _dataAccess;
-        private readonly IErrorManager _errorManager;
+        private readonly DataAccess _dataAccess;
 
         /// <summary>
         /// יוצר מבצע דוחות חדש
         /// </summary>
-        public ReportExecutor(IDataAccess dataAccess, IErrorManager errorManager)
+        public ReportExecutor(DataAccess dataAccess)
         {
             _dataAccess = dataAccess ?? throw new ArgumentNullException(nameof(dataAccess));
-            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
         }
 
         /// <summary>
@@ -52,21 +50,14 @@ namespace ReportGenerator.Core.Management.Services
                 stopwatch.Stop();
                 
                 // רישום מידע על זמן הרצת הפרוצדורות
-                _errorManager.LogInfo(
-                    ErrorCode.General_Info,
-                    $"פרוצדורות הדוח {reportName} הסתיימו בהצלחה. זמן ריצה: {stopwatch.ElapsedMilliseconds} מילישניות.",
-                    reportName: reportName);
+                SimpleLogger.LogInfo($"פרוצדורות הדוח {reportName} הסתיימו בהצלחה. זמן ריצה: {stopwatch.ElapsedMilliseconds} מילישניות.",reportName: reportName);
 
                 // החזרת תצורת הדוח והנתונים שהתקבלו
                 return (reportConfig, dataTables);
             }
             catch (Exception ex)
             {
-                _errorManager.LogCriticalError(
-                    ErrorCode.Report_Data_Retrieval_Failed,
-                    $"שגיאה בקבלת נתוני דוח {reportName}",
-                    ex,
-                    reportName: reportName);
+                SimpleLogger.LogCriticalError( $"שגיאה בקבלת נתוני דוח {reportName}",ex,reportName: reportName);
                 
                 throw new Exception($"Error retrieving report data for {reportName}: {ex.Message}", ex);
             }

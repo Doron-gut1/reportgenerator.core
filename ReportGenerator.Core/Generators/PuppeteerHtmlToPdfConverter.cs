@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;
 using ReportGenerator.Core.Errors;
-using ReportGenerator.Core.Interfaces;
 
 namespace ReportGenerator.Core.Generators
 {
@@ -17,16 +16,15 @@ namespace ReportGenerator.Core.Generators
         private readonly string _chromePath;
         private readonly bool _useHeadless = true;
         private readonly PdfOptions _defaultPdfOptions;
-        private readonly IErrorManager _errorManager;
+
 
         /// <summary>
         /// יוצר מופע חדש של ממיר HTML ל-PDF
         /// </summary>
-        /// <param name="errorManager">מנהל שגיאות</param>
+        /// <param name="errorManager">מנהל שגיאות (אופציונלי)</param>
         /// <param name="chromePath">נתיב לתוכנת Chrome (אופציונלי)</param>
-        public PuppeteerHtmlToPdfConverter(IErrorManager errorManager, string chromePath = @"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
+        public PuppeteerHtmlToPdfConverter( string chromePath = @"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
         {
-            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
             _chromePath = chromePath;
 
             // יצירת הגדרות ברירת מחדל עבור PDF
@@ -55,10 +53,7 @@ namespace ReportGenerator.Core.Generators
         {
             if (string.IsNullOrEmpty(html))
             {
-                _errorManager.LogError(
-                    ErrorCode.PDF_Html_Conversion_Failed,
-                    ErrorSeverity.Critical,
-                    "תוכן HTML ריק או null נשלח להמרה");
+                SimpleLogger.LogError("תוכן HTML ריק או null נשלח להמרה");
                 throw new ArgumentException("HTML content cannot be null or empty");
             }
 
@@ -78,13 +73,10 @@ namespace ReportGenerator.Core.Generators
                     //var browserFetcher = new BrowserFetcher();
                     //await browserFetcher.DownloadAsync();
 
-                    //_errorManager.LogInfo(
+                    //SimpleLogger.LogInfo(
                     //    ErrorCode.General_Error,
                     //    "Chrome Headless הורד והותקן בהצלחה לצורך המרת HTML ל-PDF");
-                    _errorManager.LogCriticalError(
-                        ErrorCode.General_Error,
-                        "there is no chrome in the classic path \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe");
-
+                    SimpleLogger.LogCriticalError("there is no chrome in the classic path \"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe");
                     throw new Exception($"Error generating report");
                 }
 
@@ -100,27 +92,19 @@ namespace ReportGenerator.Core.Generators
                 var pdfOptions = options as PdfOptions ?? _defaultPdfOptions;
                 var pdfBytes = await page.PdfDataAsync(pdfOptions);
 
-                _errorManager.LogInfo(
-                    ErrorCode.General_Error,
-                    $"המרת HTML ל-PDF הושלמה בהצלחה. גודל: {pdfBytes.Length / 1024:N0} KB");
+                SimpleLogger.LogInfo($"המרת HTML ל-PDF הושלמה בהצלחה. גודל: {pdfBytes.Length / 1024:N0} KB");
 
                 return pdfBytes;
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.PDF_Chrome_Not_Found,
-                    ErrorSeverity.Critical,
-                    "שגיאה בהפעלת Chrome. וודא שהתוכנה מותקנת או שהנתיב תקין",
+                SimpleLogger.LogError("שגיאה בהפעלת Chrome. וודא שהתוכנה מותקנת או שהנתיב תקין",
                     ex);
                 throw new Exception("Failed to start Chrome browser. Make sure Chrome is installed or path is correct", ex);
             }
             catch (Exception ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.PDF_Html_Conversion_Failed,
-                    ErrorSeverity.Critical,
-                    "שגיאה בהמרת HTML ל-PDF",
+                SimpleLogger.LogError("שגיאה בהמרת HTML ל-PDF",
                     ex);
                 throw new Exception("Error converting HTML to PDF", ex);
             }
@@ -139,10 +123,7 @@ namespace ReportGenerator.Core.Generators
             {
                 if (!File.Exists(htmlFilePath))
                 {
-                    _errorManager.LogError(
-                        ErrorCode.PDF_Html_Conversion_Failed,
-                        ErrorSeverity.Critical,
-                        $"קובץ HTML לא קיים: {htmlFilePath}");
+                    SimpleLogger.LogError($"קובץ HTML לא קיים: {htmlFilePath}");
                     throw new FileNotFoundException($"HTML file not found: {htmlFilePath}");
                 }
 
@@ -156,9 +137,7 @@ namespace ReportGenerator.Core.Generators
                 if (!string.IsNullOrEmpty(pdfFilePath))
                 {
                     await File.WriteAllBytesAsync(pdfFilePath, pdfBytes);
-                    _errorManager.LogInfo(
-                        ErrorCode.General_Error,
-                        $"קובץ PDF נשמר: {pdfFilePath}");
+                    SimpleLogger.LogInfo($"קובץ PDF נשמר: {pdfFilePath}");
                 }
 
                 return pdfBytes;
@@ -170,11 +149,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.PDF_Html_Conversion_Failed,
-                    ErrorSeverity.Critical,
-                    $"שגיאה בהמרת קובץ HTML ל-PDF: {htmlFilePath}",
-                    ex);
+                SimpleLogger.LogError($"שגיאה בהמרת קובץ HTML ל-PDF: {htmlFilePath}",ex);
                 throw new Exception($"Error converting HTML file to PDF: {htmlFilePath}", ex);
             }
         }
@@ -235,12 +210,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.PDF_Html_Conversion_Failed,
-                    ErrorSeverity.Error,
-                    "שגיאה בהמרת HTML עם כותרות מותאמות ל-PDF",
-                    ex);
-
+                SimpleLogger.LogError("שגיאה בהמרת HTML עם כותרות מותאמות ל-PDF",ex);
                 return await ConvertToPdf(html, title);
             }
         }
@@ -275,11 +245,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.PDF_Html_Conversion_Failed,
-                    "שגיאה בחילוץ כותרת עליונה מ-HTML",
-                    ex);
-
+                SimpleLogger.LogWarning("שגיאה בחילוץ כותרת עליונה מ-HTML",ex.Message);
                 return "<div style='text-align: center; font-size: 10pt;'></div>";
             }
         }
@@ -313,11 +279,7 @@ namespace ReportGenerator.Core.Generators
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.PDF_Html_Conversion_Failed,
-                    "שגיאה בחילוץ כותרת תחתונה מ-HTML",
-                    ex);
-
+                SimpleLogger.LogWarning("שגיאה בחילוץ כותרת תחתונה מ-HTML",ex.Message);
                 return GetDefaultFooterTemplate();
             }
         }

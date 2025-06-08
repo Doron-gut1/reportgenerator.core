@@ -1,9 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using ReportGenerator.Api.Models;
-using ReportGenerator.Api.Services;
 using ReportGenerator.Api.Utilities;
+using ReportGenerator.Core.Data;
 using ReportGenerator.Core.Errors;
-using ReportGenerator.Core.Interfaces;
+using ReportGenerator.Core.Management;
+using ReportGenerator.Core.Management.Enums;
+using ReportGenerator.Core.Configuration;
+using Microsoft.Extensions.Options;
+using ReportGenerator.Api.Services;
 
 namespace ReportGenerator.Api.Controllers
 {
@@ -11,24 +15,37 @@ namespace ReportGenerator.Api.Controllers
     [Route("api/[controller]")]
     public class ReportsController : ControllerBase
     {
-        private readonly IReportGenerator _reportGenerator;
         private readonly IParameterConverter _parameterConverter;
         private readonly IFileSystemService _fileSystemService;
         private readonly ILogger<ReportsController> _logger;
-        private readonly IErrorManager _errorManager;
+        private readonly ReportManager _reportManager;
+        private readonly DataAccess _dataAccess;
 
         public ReportsController(
-            IReportGenerator reportGenerator,
             IParameterConverter parameterConverter,
             IFileSystemService fileSystemService,
             ILogger<ReportsController> logger,
-            IErrorManager errorManager)
+            IConfiguration configuration)
         {
-            _reportGenerator = reportGenerator;
             _parameterConverter = parameterConverter;
             _fileSystemService = fileSystemService;
             _logger = logger;
-            _errorManager = errorManager;
+            
+            // קבלת הגדרות מהקונפיגורציה
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var templatesFolder = configuration["ReportSettings:TemplatesFolder"];
+            var outputFolder = configuration["ReportSettings:OutputFolder"];
+            
+            // SimpleLogger כבר מאותחל ב-Program.cs
+            
+            // יצירת ReportManager ישירות
+            _reportManager = new ReportManager(
+                connectionString,
+                templatesFolder,
+                outputFolder);
+                
+            // יצירת DataAccess ישירות  
+            _dataAccess = new DataAccess(connectionString);
         }
 
         /// <summary>
@@ -58,7 +75,7 @@ namespace ReportGenerator.Api.Controllers
                 var parameters = _parameterConverter.ConvertRequestParameters(request.Parameters);
 
                 // הפקת הדוח עם שמירה מפורשת (כבר כולל שמירה)
-                var result = await _reportGenerator.GenerateReportAndSave(
+                var result = await _reportManager.GenerateReportAndSave(
                     request.ReportName,
                     outputFormat,
                     null, // שימוש בנתיב ברירת מחדל
@@ -122,7 +139,7 @@ namespace ReportGenerator.Api.Controllers
                 var parameters = _parameterConverter.ConvertRequestParameters(request.Parameters);
 
                 // הפקת הדוח ללא שמירה
-                var result = await _reportGenerator.GenerateReportBytesOnly(
+                var result = await _reportManager.GenerateReportBytesOnly(
                     request.ReportName,
                     outputFormat,
                     parameters);
@@ -173,8 +190,7 @@ namespace ReportGenerator.Api.Controllers
                 }
 
                 // בדיקה אם קיים דוח כזה בבסיס הנתונים
-                var dataAccess = HttpContext.RequestServices.GetRequiredService<IDataAccess>();
-                var reportConfig = await dataAccess.GetReportConfig(reportName);
+                var reportConfig = await _dataAccess.GetReportConfig(reportName);
 
                 // בדיקה אם התבנית קיימת
                 var templatePath = _fileSystemService.GetReportTemplatePath(reportName, departmentId);

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="he-IL" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ReportTitle}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            max-width: 250px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .invoice-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .allocation-number {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .original-mark {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .date-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .customer-info {
+            margin-bottom: 20px;
+        }
+
+            .customer-info p {
+                white-space: pre-line;
+            }
+
+        .received-from {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .details {
+            margin-bottom: 20px;
+        }
+
+            .details p {
+                white-space: pre-line;
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            padding: 8px;
+            text-align: right;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        td p {
+            margin: 3px 0px;
+            text-align: right;
+            line-height: normal;
+            direction: rtl;
+        }
+
+        .total-row {
+            font-weight: bold;
+        }
+
+        .payment-info {
+            margin-bottom: 20px;
+        }
+
+        .balance {
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .disclaimer {
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        .signature {
+            direction: ltr;
+            display: flex;
+            justify-content: space-between;
+            margin-left: 100px;
+            margin-bottom: 20px;
+        }
+
+        .stamp-container {
+            direction: ltr;
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .stamp {
+            position: absolute;
+            left: 40px;
+            top: -20px;
+            width: 117px;
+            height: 113px;
+        }
+
+        .signature-image {
+            width: 198px;
+            height: 58px;
+        }
+
+        .payment-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+            .payment-table td {
+                border: none;
+                border-bottom: 0.5pt solid #7F7F7F;
+                padding: 0cm 2.85pt 0cm 2.85pt;
+            }
+
+                .payment-table td:first-child {
+                    border-right: 0.5pt solid windowtext;
+                    width: 25.5pt;
+                }
+
+                .payment-table td:last-child {
+                    border-left: 0.5pt solid windowtext;
+                    width: 82.2pt;
+                }
+
+            .payment-table tr:first-child td {
+                border-top: 0.5pt solid #7F7F7F;
+                font-weight: bold;
+            }
+
+        .asset-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+            .asset-table td {
+                border: none;
+                border-bottom: 0.5pt solid #7F7F7F;
+                padding: 0cm 2.85pt 0cm 2.85pt;
+            }
+
+            .asset-table tr:first-child td {
+                border-bottom: 0.5pt solid #7F7F7F;
+                font-weight: bold;
+            }
+
+            .asset-table tr:last-child td {
+                border-top: 0.5pt solid #7F7F7F;
+            }
+    </style>
+</head>
+<body>
+    <!-- Header with Logo -->
+    <div class="header">
+        {{#if logo}}
+        <img class="logo" src="data:image/png;base64, {{logo}}" alt="Municipality Logo">
+        {{/if}}
+    </div>
+
+    <!-- Date and Recipient Section -->
+    <div class="date-section">
+        <div>
+            <strong>לכבוד</strong>
+        </div>
+        <div>
+            <strong>תאריך ושעה:</strong> {{formatDate GetKblDocData_date "dd/MM/yyyy HH:mm"}}
+        </div>
+    </div>
+
+    <div class="customer-info">
+        <p>
+            {{GetKblDocData_recipient}}
+            {{GetKblDocData_address}}
+        </p>
+    </div>
+
+    <!-- Invoice Title Section -->
+    <div class="header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="width: 18.44%;"></div>
+            <div style="width: 63.34%; text-align: center;">
+                <div class="invoice-title">
+                    {{#if GetKblDocData_isReceipt}}קבלה{{/if}}
+                    {{#if GetKblDocData_isInvoice}}חשבונית מס / קבלה{{/if}}
+                    {{#if GetKblDocData_isCharge}}חיוב / קבלה{{/if}}
+                    {{#if GetKblDocData_isJournal}}פקודת יומן{{/if}}
+                    מס' {{GetKblDocData_id}}
+                </div>
+                {{#if GetKblDocData_hasConfirmation}}
+                <div class="allocation-number">מספר הקצאה: {{GetKblDocData_confirmationNumber}}</div>
+                {{/if}}
+            </div>
+            <div style="width: 18.44%; text-align: left;">
+                <div class="original-mark">{{#if GetKblDocData_isOriginal}}מקור{{else}}העתק{{/if}}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Received From Section -->
+    <div class="received-from">
+        <div><strong>נתקבל מאת: <u>{{GetKblDocData_receivedFrom}}</u></strong></div>
+        <div><strong>קוד משלם: <u>{{GetKblDocData_payer}}</u></strong></div>
+    </div>
+
+    <!-- Details Section -->
+    <div class="details">
+        <p><strong>פרטים:</strong> {{GetKblDocData_details}}</p>
+    </div>
+
+    <!-- Assets Table -->
+    <table class="asset-table">
+        <tr>
+            <td width="110.55pt">
+                <p><b>נכס</b></p>
+            </td>
+            <td width="96.4pt">
+                <p><b>כתובת הנכס</b></p>
+            </td>
+            <td width="133.25pt">
+                <p><b>תשלום עבור</b></p>
+            </td>
+            <td width="36.85pt">
+                <p><b>שנה</b></p>
+            </td>
+            <td width="3.0cm">
+                <p><b>סכום</b></p>
+            </td>
+        </tr>
+        {{#each GetKblAssetData_list}}
+        <tr>
+            <td><p>{{id}}</p></td>
+            <td><p>{{address}}</p></td>
+            <td><p>{{payFor}}</p></td>
+            <td><p>{{year}}</p></td>
+            <td><p>{{format sum}} ₪</p></td>
+        </tr>
+        {{/each}}
+        <tr>
+            <td><p></p></td>
+            <td><p></p></td>
+            <td><p></p></td>
+            <td><p><b>סה"כ</b></p></td>
+            <td><p>{{format totalAssetsSum}} ₪</p></td>
+        </tr>
+    </table>
+
+    {{#if GetKblDocData_hasBalance}}
+    <!-- Balance Section -->
+    <div class="balance">
+        <p>יתרתך נכון לתאריך {{formatDate GetKblDocData_balanceDate}} היא: {{format GetKblDocData_balance}} ₪</p>
+    </div>
+    {{/if}}
+
+    <!-- Payment Methods Table -->
+    <table class="payment-table">
+        <tr>
+            <td width="25.5pt"><p></p></td>
+            <td width="79.35pt"><p><b>צורת התשלום</b></p></td>
+            <td width="53.85pt"><p><b>זמן פרעון</b></p></td>
+            <td width="221.1pt"><p><b>פרטים</b></p></td>
+            <td width="82.2pt"><p><b>סכום</b></p></td>
+        </tr>
+        {{#each GetKblPaymentDetails_list}}
+        <tr>
+            <td><p>{{@index}}</p></td>
+            <td><p>{{paymentTypeName}}</p></td>
+            <td><p>{{formatDate repaymentTime}}</p></td>
+            <td><p>{{details}}</p></td>
+            <td><p>{{format sum}} ₪</p></td>
+        </tr>
+        {{/each}}
+    </table>
+
+    {{#if hasCheckPayment}}
+    <!-- Check Disclaimer -->
+    <div class="disclaimer">
+        <p>אין קבלה זו מהווה אישור אלא לאחר פירעון השיקים המפורטים בה.</p>
+    </div>
+    {{/if}}
+
+    {{#if GetKblDocData_performedBy}}
+    <!-- Performed By -->
+    <div class="signature">
+        <p>בוצע ע"י {{GetKblDocData_performedBy}}</p>
+    </div>
+    {{/if}}
+
+    <!-- Signature and Stamp -->
+    <div class="stamp-container">
+        <div class="signature-image">
+            {{#if signatureImage}}
+            <img src="data:image/png;base64, {{signatureImage}}" alt="Signature">
+            {{/if}}
+        </div>
+        {{#if GetKblDocData_stamp}}
+        <img class="stamp" src="data:image/png;base64, {{GetKblDocData_stamp}}" alt="Stamp">
+        {{/if}}
+    </div>
+</body>
+</html>

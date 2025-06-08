@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using ReportGenerator.Core.Configuration;
 using ReportGenerator.Core.Data.Models;
 using ReportGenerator.Core.Errors;
-using ReportGenerator.Core.Interfaces;
+
 using System.Data;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -32,11 +32,10 @@ namespace ReportGenerator.Core.Data
         }
     }
     
-    public class DataAccess : IDataAccess
+    public class DataAccess
     {
         private readonly string _connectionString;
-        private readonly IErrorManager _errorManager;
-        
+
         // מטמונים לפריטים נפוצים
         private static readonly ConcurrentDictionary<string, CacheItem<ReportConfig>> _reportConfigCache = new();
         private static readonly ConcurrentDictionary<string, CacheItem<string>> _monthNameCache = new();
@@ -57,10 +56,8 @@ namespace ReportGenerator.Core.Data
         /// </summary>
         /// <param name="errorManager">מנהל שגיאות</param>
         /// <param name="settings">הגדרות</param>
-        public DataAccess(IErrorManager errorManager, IOptions<ReportSettings> settings)
-        {
-            _errorManager = errorManager ?? throw new ArgumentNullException(nameof(errorManager));
-            
+        public DataAccess( IOptions<ReportSettings> settings)
+        { 
             var settingsValue = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
             _connectionString = settingsValue.ConnectionString ?? throw new ArgumentException("Connection string cannot be null", nameof(settings));
         }
@@ -72,7 +69,6 @@ namespace ReportGenerator.Core.Data
         public DataAccess(string connectionString)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
-            _errorManager = new ErrorManager(new DbErrorLogger());
         }
 
         /// <summary>
@@ -91,10 +87,7 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    _errorManager.LogError(
-                        ErrorCode.DB_Report_NotFound,
-                        ErrorSeverity.Critical,
-                        $"דוח בשם {reportName} לא נמצא במערכת");
+                    SimpleLogger.LogError($"דוח בשם {reportName} לא נמצא במערכת");
                     throw new Exception($"Report Name {reportName} not found");
                 }
                 
@@ -102,20 +95,13 @@ namespace ReportGenerator.Core.Data
             }
             catch (SqlException ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.DB_Query_Failed,
-                    ErrorSeverity.Critical,
-                    $"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",
+                SimpleLogger.LogError($"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",
                     ex);
                 throw new Exception($"SQL error retrieving stored procedures for report {reportName}", ex);
             }
             catch (Exception ex) when (!(ex.InnerException is SqlException) && !(ex is InvalidOperationException))
             {
-                _errorManager.LogError(
-                    ErrorCode.DB_Connection_Failed,
-                    ErrorSeverity.Critical,
-                    $"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",
-                    ex);
+                SimpleLogger.LogError($"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",ex);
                 throw new Exception($"Database connection error retrieving stored procedures for report {reportName}", ex);
             }
         }
@@ -141,9 +127,7 @@ namespace ReportGenerator.Core.Data
                     
                 if (result == null)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.DB_MonthName_NotFound,
-                        $"לא נמצא שם עבור חודש {mnt}");
+                    SimpleLogger.LogWarning($"לא נמצא שם עבור חודש {mnt}");
                     return $"חודש {mnt}";
                 }
                 
@@ -157,10 +141,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    $"שגיאה בשליפת שם חודש {mnt}",
-                    ex);
+                SimpleLogger.LogError($"שגיאה בשליפת שם חודש {mnt}",ex);
                 return $"חודש {mnt}";
             }
         }
@@ -186,9 +167,7 @@ namespace ReportGenerator.Core.Data
                     
                 if (result == null)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.DB_MonthName_NotFound,
-                        $"לא נמצא שם תקופה עבור חודש {mnt}");
+                    SimpleLogger.LogWarning($"לא נמצא שם תקופה עבור חודש {mnt}");
                     return $"תקופה {mnt}";
                 }
                 
@@ -202,10 +181,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    $"שגיאה בשליפת שם תקופה {mnt}",
-                    ex);
+                SimpleLogger.LogError( $"שגיאה בשליפת שם תקופה {mnt}", ex);
                 return $"תקופה {mnt}";
             }
         }
@@ -219,9 +195,7 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.DB_MoazaName_NotFound,
-                        "לא נמצא שם מועצה");
+                    SimpleLogger.LogWarning("לא נמצא שם מועצה");
                     return "מועצה לא ידועה";
                 }
 
@@ -229,10 +203,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    "שגיאה בשליפת שם מועצה",
-                    ex);
+                SimpleLogger.LogError("שגיאה בשליפת שם מועצה",ex);
                 return "מועצה לא ידועה";
             }
         }
@@ -257,9 +228,7 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.DB_SugtsName_NotFound,
-                        $"לא נמצא שם עבור סוג חיוב {sugts}");
+                    SimpleLogger.LogWarning($"לא נמצא שם עבור סוג חיוב {sugts}");
                     return $"סוג חיוב {sugts}";
                 }
                 
@@ -273,10 +242,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    $"שגיאה בשליפת שם סוג חיוב {sugts}",
-                    ex);
+                SimpleLogger.LogError($"שגיאה בשליפת שם סוג חיוב {sugts}",ex);
                 return $"סוג חיוב {sugts}";
             }
         }
@@ -301,9 +267,7 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.DB_IshvName_NotFound,
-                        $"לא נמצא שם עבור יישוב {isvkod}");
+                    SimpleLogger.LogWarning( $"לא נמצא שם עבור יישוב {isvkod}");
                     return $"יישוב {isvkod}";
                 }
                 
@@ -317,10 +281,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    $"שגיאה בשליפת שם יישוב {isvkod}",
-                    ex);
+                SimpleLogger.LogError($"שגיאה בשליפת שם יישוב {isvkod}",ex);
                 return $"יישוב {isvkod}";
             }
         }
@@ -377,10 +338,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    $"שגיאה בשליפת שמות עבור קודים {codes} מטבלה {tableName}",
-                    ex);
+                SimpleLogger.LogError($"שגיאה בשליפת שמות עבור קודים {codes} מטבלה {tableName}",ex);
                 return codes;
             }
         }
@@ -406,10 +364,7 @@ namespace ReportGenerator.Core.Data
 
                 if (result == null)
                 {
-                    _errorManager.LogError(
-                        ErrorCode.DB_Report_Config_Invalid,
-                        ErrorSeverity.Critical,
-                        $"הגדרות דוח {reportName} לא נמצאו במערכת");
+                    SimpleLogger.LogError($"הגדרות דוח {reportName} לא נמצאו במערכת");
                     throw new Exception($"Report configuration for {reportName} not found");
                 }
 
@@ -423,20 +378,12 @@ namespace ReportGenerator.Core.Data
             }
             catch (SqlException ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.DB_Query_Failed,
-                    ErrorSeverity.Critical,
-                    $"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",
-                    ex);
+                SimpleLogger.LogError($"שגיאת SQL בזמן שליפת הגדרות דוח {reportName}",ex);
                 throw new Exception($"SQL error retrieving report configuration for {reportName}", ex);
             }
             catch (Exception ex) when (!(ex.InnerException is SqlException) && !(ex is InvalidOperationException))
             {
-                _errorManager.LogError(
-                    ErrorCode.DB_Connection_Failed,
-                    ErrorSeverity.Critical,
-                    $"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",
-                    ex);
+                SimpleLogger.LogError($"שגיאת התחברות למסד נתונים בזמן שליפת הגדרות דוח {reportName}",ex);
                 throw new Exception($"Database connection error retrieving report configuration for {reportName}", ex);
             }
         }
@@ -461,10 +408,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    $"שגיאה בבדיקה אם {objectName} הוא פונקציה טבלאית",
-                    ex);
+                SimpleLogger.LogError($"שגיאה בבדיקה אם {objectName} הוא פונקציה טבלאית",ex);
                 return false;
             }
         }
@@ -520,9 +464,7 @@ namespace ReportGenerator.Core.Data
                 
                 if (mappings.Count == 0)
                 {
-                    _errorManager.LogWarning(
-                        ErrorCode.DB_ColumnMapping_NotFound,
-                        $"לא נמצאו מיפויי עמודות עבור פרוצדורות: {procNames}");
+                    SimpleLogger.LogWarning($"לא נמצאו מיפויי עמודות עבור פרוצדורות: {procNames}");
                 }
                 
                 // שמירה במטמון אם יש לפחות מיפוי אחד
@@ -538,10 +480,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogNormalError(
-                    ErrorCode.DB_Query_Failed,
-                    $"שגיאה בשליפת מיפויי עמודות עבור פרוצדורות: {procNames}",
-                    ex);
+                SimpleLogger.LogError( $"שגיאה בשליפת מיפויי עמודות עבור פרוצדורות: {procNames}",ex);
                 return mappings;
             }
         }
@@ -586,11 +525,7 @@ namespace ReportGenerator.Core.Data
                 }
                 catch (Exception ex)
                 {
-                    _errorManager.LogError(
-                        ErrorCode.DB_Query_Failed,
-                        ErrorSeverity.Error,
-                        $"שגיאה בהרצת {objectName}",
-                        ex);
+                    SimpleLogger.LogError($"שגיאה בהרצת {objectName}",ex);
                     
                     // צור טבלה ריקה כדי לא לשבור את התהליך (אם זו לא פרוצדורה קריטית)
                     var emptyTable = new DataTable();
@@ -609,77 +544,178 @@ namespace ReportGenerator.Core.Data
         /// <param name="functionName">שם הפונקציה</param>
         /// <param name="parameters">פרמטרים</param>
         /// <returns>טבלת נתונים עם התוצאות</returns>
+        /// 
         public async Task<DataTable> ExecuteTableFunction(string functionName, Dictionary<string, ParamValue> parameters)
         {
             try
             {
                 using var connection = new SqlConnection(_connectionString);
-                
-                // פתיחת החיבור
                 await connection.OpenAsync();
-                
-                // הכנת מחרוזת הפרמטרים
+
+                // שימוש באותה פונקציה כמו בפרוצדורות - היא עובדת גם עבור פונקציות
+                var funcParams = await GetProcedureParameters(functionName);
+
+                // סינון הפרמטרים - רק אלה שהפונקציה מצפה להם עם case-insensitive
+                var filteredParams = new Dictionary<string, ParamValue>();
                 var paramList = new List<string>();
-                foreach (var param in parameters)
+
+                foreach (var funcParam in funcParams)
                 {
-                    paramList.Add($"@{param.Key}");
+                    string paramName = funcParam.Name.TrimStart('@');
+
+                    // חיפוש case-insensitive של הפרמטר
+                    ParamValue paramValue = null;
+
+                    // עבור על כל הפרמטרים שהועברו ובדוק השוואה case-insensitive
+                    foreach (var kvp in parameters)
+                    {
+                        string cleanKey = kvp.Key.TrimStart('@'); // הסר @ גם מהפרמטר שהועבר
+
+                        if (string.Equals(paramName, cleanKey, StringComparison.OrdinalIgnoreCase))
+                        {
+                            paramValue = kvp.Value;
+                            break;
+                        }
+                    }
+
+                    // אם נמצא פרמטר תואם
+                    if (paramValue != null)
+                    {
+                        filteredParams.Add(paramName, paramValue);
+                        paramList.Add($"@{paramName}");
+                    }
+                    else if (funcParam.IsNullable)
+                    {
+                        // אם הפרמטר nullable - הוסף אותו עם NULL
+                        filteredParams.Add(paramName, new ParamValue(null, DbType.String));
+                        paramList.Add($"@{paramName}");
+                    }
+                    else
+                    {
+                        // אם הפרמטר חובה ולא nullable - זרוק שגיאה
+                        SimpleLogger.LogError($"פרמטר חובה {funcParam.Name} חסר עבור פונקציה {functionName}");
+                        throw new ArgumentException($"Missing required parameter {funcParam.Name} for table function {functionName}");
+                    }
                 }
-                
-                string paramString = string.Join(", ", paramList);
-                
+
                 // בניית פקודת SQL
-                string sql = string.IsNullOrEmpty(paramString) 
+                string paramString = string.Join(", ", paramList);
+                string sql = string.IsNullOrEmpty(paramString)
                     ? $"SELECT * FROM {functionName}()"
                     : $"SELECT * FROM {functionName}({paramString})";
-                
+
                 // הכנת הפקודה
                 using var command = new SqlCommand(sql, connection);
-                
+
                 // הוספת פרמטרים
-                foreach (var param in parameters)
+                foreach (var param in filteredParams)
                 {
-                    // המרה לסוג הפרמטר המתאים
                     SqlDbType sqlType = GetSqlDbType(param.Value.Type);
-                    
-                    // המרת JsonElement לסוג הנכון לפני העברה לפרוצדורה
                     object convertedValue = ConvertJsonElementToSqlType(param.Value.Value, param.Value.Type);
-                    
+
                     var sqlParam = new SqlParameter($"@{param.Key}", sqlType)
                     {
                         Value = convertedValue ?? DBNull.Value
                     };
-                    
+
                     command.Parameters.Add(sqlParam);
                 }
-                
+
                 // הרצת הפקודה
                 using var reader = await command.ExecuteReaderAsync();
-                
+
                 // המרה ל-DataTable
                 var dataTable = new DataTable();
                 dataTable.Load(reader);
-                
+
                 return dataTable;
             }
             catch (SqlException ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.DB_TableFunc_Execution_Failed,
-                    ErrorSeverity.Error,
-                    $"שגיאת SQL בהרצת פונקציה טבלאית {functionName}",
-                    ex);
+                SimpleLogger.LogError($"שגיאת SQL בהרצת פונקציה טבלאית {functionName}", ex);
                 throw;
+            }
+            catch (ArgumentException ex)
+            {
+                throw; // כבר נרשמה שגיאה
             }
             catch (Exception ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.DB_Connection_Failed,
-                    ErrorSeverity.Error,
-                    $"שגיאת התחברות או הרצה של פונקציה טבלאית {functionName}",
-                    ex);
+                SimpleLogger.LogError($"שגיאת התחברות או הרצה של פונקציה טבלאית {functionName}", ex);
                 throw;
             }
         }
+        //public async Task<DataTable> ExecuteTableFunction(string functionName, Dictionary<string, ParamValue> parameters)
+        //{
+        //    try
+        //    {
+        //        using var connection = new SqlConnection(_connectionString);
+
+        //        // פתיחת החיבור
+        //        await connection.OpenAsync();
+
+        //        // הכנת מחרוזת הפרמטרים
+        //        var paramList = new List<string>();
+        //        foreach (var param in parameters)
+        //        {
+        //            paramList.Add($"@{param.Key}");
+        //        }
+
+        //        string paramString = string.Join(", ", paramList);
+
+        //        // בניית פקודת SQL
+        //        string sql = string.IsNullOrEmpty(paramString) 
+        //            ? $"SELECT * FROM {functionName}()"
+        //            : $"SELECT * FROM {functionName}({paramString})";
+
+        //        // הכנת הפקודה
+        //        using var command = new SqlCommand(sql, connection);
+
+        //        // הוספת פרמטרים
+        //        foreach (var param in parameters)
+        //        {
+        //            // המרה לסוג הפרמטר המתאים
+        //            SqlDbType sqlType = GetSqlDbType(param.Value.Type);
+
+        //            // המרת JsonElement לסוג הנכון לפני העברה לפרוצדורה
+        //            object convertedValue = ConvertJsonElementToSqlType(param.Value.Value, param.Value.Type);
+
+        //            var sqlParam = new SqlParameter($"@{param.Key}", sqlType)
+        //            {
+        //                Value = convertedValue ?? DBNull.Value
+        //            };
+
+        //            command.Parameters.Add(sqlParam);
+        //        }
+
+        //        // הרצת הפקודה
+        //        using var reader = await command.ExecuteReaderAsync();
+
+        //        // המרה ל-DataTable
+        //        var dataTable = new DataTable();
+        //        dataTable.Load(reader);
+
+        //        return dataTable;
+        //    }
+        //    catch (SqlException ex)
+        //    {
+        //        SimpleLogger.LogError(
+        //            ErrorCode.DB_TableFunc_Execution_Failed,
+        //            ErrorSeverity.Error,
+        //            $"שגיאת SQL בהרצת פונקציה טבלאית {functionName}",
+        //            ex);
+        //        throw;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        SimpleLogger.LogError(
+        //            ErrorCode.DB_Connection_Failed,
+        //            ErrorSeverity.Error,
+        //            $"שגיאת התחברות או הרצה של פונקציה טבלאית {functionName}",
+        //            ex);
+        //        throw;
+        //    }
+        //}
 
         /// <summary>
         /// ממיר אובייקט JsonElement לסוג שבסיס הנתונים יכול לעבוד איתו
@@ -725,9 +761,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Parameters_Invalid_Value,
-                    $"שגיאה בהמרת ערך {jsonElement} לסוג {dbType}: {ex.Message}");
+                SimpleLogger.LogWarning($"שגיאה בהמרת ערך {jsonElement} לסוג {dbType}: {ex.Message}");
                     
                 // החזרת הערך כמחרוזת אם ההמרה נכשלה
                 return jsonElement.ToString() ?? string.Empty;
@@ -740,80 +774,68 @@ namespace ReportGenerator.Core.Data
         /// <param name="spName">שם הפרוצדורה</param>
         /// <param name="parameters">פרמטרים</param>
         /// <returns>טבלת נתונים עם התוצאות</returns>
-        private async Task<DataTable> ExecuteStoredProcedure(string spName, Dictionary<string, ParamValue> parameters)
-        {
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+        //private async Task<DataTable> ExecuteStoredProcedure(string spName, Dictionary<string, ParamValue> parameters)
+        //{
+        //    try
+        //    {
+        //        using var connection = new SqlConnection(_connectionString);
+        //        await connection.OpenAsync();
 
-                // שליפת מידע על הפרמטרים שהפרוצדורה מקבלת
-                var procParams = await GetProcedureParameters(spName);
+        //        // שליפת מידע על הפרמטרים שהפרוצדורה מקבלת
+        //        var procParams = await GetProcedureParameters(spName);
 
-                var dynamicParams = new DynamicParameters();
+        //        var dynamicParams = new DynamicParameters();
 
-                // רק פרמטרים שנמצאים גם ברשימת הפרמטרים של הפרוצדורה
-                foreach (var procParam in procParams)
-                {
-                    string paramName = procParam.Name;
-                    if (paramName.StartsWith("@"))
-                        paramName = paramName.Substring(1); // הסרת @ מתחילת השם
+        //        // רק פרמטרים שנמצאים גם ברשימת הפרמטרים של הפרוצדורה
+        //        foreach (var procParam in procParams)
+        //        {
+        //            string paramName = procParam.Name;
+        //            if (paramName.StartsWith("@"))
+        //                paramName = paramName.Substring(1); // הסרת @ מתחילת השם
 
-                    // בדיקה אם הפרמטר הזה נמצא ברשימת הפרמטרים שהועברו
-                    if (parameters.TryGetValue(paramName, out ParamValue paramValue))
-                    {
-                        // המרת JsonElement לסוג הנכון לפני העברה לפרוצדורה
-                        object convertedValue = ConvertJsonElementToSqlType(paramValue.Value, paramValue.Type);
+        //            // בדיקה אם הפרמטר הזה נמצא ברשימת הפרמטרים שהועברו
+        //            if (parameters.TryGetValue(paramName, out ParamValue paramValue))
+        //            {
+        //                // המרת JsonElement לסוג הנכון לפני העברה לפרוצדורה
+        //                object convertedValue = ConvertJsonElementToSqlType(paramValue.Value, paramValue.Type);
                         
-                        dynamicParams.Add(
-                            procParam.Name, // שם הפרמטר כפי שמוגדר בפרוצדורה
-                            convertedValue,
-                            paramValue.Type);
-                    }
-                    else if (!procParam.IsOptional)
-                    {
-                        // אם זה פרמטר חובה שלא הועבר, רשום שגיאה
-                        _errorManager.LogError(
-                            ErrorCode.DB_StoredProc_MissingParam,
-                            ErrorSeverity.Error,
-                            $"פרמטר נדרש {procParam.Name} חסר עבור פרוצדורה {spName}");
-                            
-                        throw new ArgumentException($"Missing required parameter {procParam.Name} for stored procedure {spName}");
-                    }
-                }
+        //                dynamicParams.Add(
+        //                    procParam.Name, // שם הפרמטר כפי שמוגדר בפרוצדורה
+        //                    convertedValue,
+        //                    paramValue.Type);
+        //            }
+        //            else if (!procParam.IsOptional)
+        //            {
+        //                // אם זה פרמטר חובה שלא הועבר, רשום שגיאה
+        //                SimpleLogger.LogError($"פרמטר נדרש {procParam.Name} חסר עבור פרוצדורה {spName}");
+        //                throw new ArgumentException($"Missing required parameter {procParam.Name} for stored procedure {spName}");
+        //            }
+        //        }
 
-                // הרצת הפרוצדורה עם הפרמטרים המתאימים בלבד
-                var result = await connection.QueryAsync(
-                    spName,
-                    dynamicParams,
-                    commandType: CommandType.StoredProcedure);
+        //        // הרצת הפרוצדורה עם הפרמטרים המתאימים בלבד
+        //        var result = await connection.QueryAsync(
+        //            spName,
+        //            dynamicParams,
+        //            commandType: CommandType.StoredProcedure);
 
-                return ToDataTable(result);
-            }
-            catch (SqlException ex)
-            {
-                _errorManager.LogError(
-                    ErrorCode.DB_StoredProc_Execution_Failed,
-                    ErrorSeverity.Error,
-                    $"שגיאת SQL בהרצת פרוצדורה {spName}",
-                    ex);
-                throw;
-            }
-            catch (ArgumentException ex)
-            {
-                // כבר נרשמה שגיאה בבדיקת הפרמטרים, רק זרוק הלאה
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _errorManager.LogError(
-                    ErrorCode.DB_Connection_Failed,
-                    ErrorSeverity.Error,
-                    $"שגיאת התחברות או הרצה של פרוצדורה {spName}",
-                    ex);
-                throw;
-            }
-        }
+        //        return ToDataTable(result);
+        //    }
+        //    catch (SqlException ex)
+        //    {
+        //        SimpleLogger.LogError($"שגיאת SQL בהרצת פרוצדורה {spName}", ex);
+        //        throw;
+        //    }
+        //    catch (ArgumentException ex)
+        //    {
+        //        // כבר נרשמה שגיאה בבדיקת הפרמטרים, רק זרוק הלאה
+        //        throw;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        SimpleLogger.LogError( $"שגיאת התחברות או הרצה של פרוצדורה {spName}",ex);
+        //        throw;
+        //    }
+        //}
         public async Task<Dictionary<string, string>> GetDefaultColumnMappings()
         {
             try
@@ -837,20 +859,13 @@ namespace ReportGenerator.Core.Data
                 }
                 
                 // לוג למיפויים שנטענו
-                _errorManager.LogInfo(
-                    ErrorCode.General_Info,
-                    $"נטענו {mappings.Count} מיפויים של שמות עמודות");
+                SimpleLogger.LogInfo($"נטענו {mappings.Count} מיפויים של שמות עמודות");
 
                 return mappings;
             }
             catch (Exception ex)
             {
-                _errorManager.LogError(
-                    ErrorCode.DB_Query_Failed,
-                    ErrorSeverity.Error,
-                    "שגיאה בטעינת מיפויי עמודות",
-                    ex);
-
+                SimpleLogger.LogError("שגיאה בטעינת מיפויי עמודות",ex);
                 return new Dictionary<string, string>();
             }
         }
@@ -909,6 +924,7 @@ namespace ReportGenerator.Core.Data
                         {
                             Name = paramName,
                             DataType = param.DataType.ToString(),
+                            IsOptional = param.HasDefault, // פרמטר אופציונלי אם יש לו ערך ברירת מחדל
                             DefaultValue = param.HasDefault ? param.DefaultValue?.ToString() : null,
                             IsNullable = true  // מניחים שפרמטרים אופציונליים הם nullable
                         };
@@ -921,10 +937,7 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Parameters_Missing,
-                    $"שגיאה בקבלת פרמטרים לפרוצדורה {procName}: {ex.Message}",
-                    ex);
+                SimpleLogger.LogError($"שגיאה בקבלת פרמטרים לפרוצדורה {procName}: {ex.Message}", ex, procName);
             }
 
             // אם לא מצאנו פרמטרים בדרך הרגילה, ננסה להסיק מהתנהגות הפרוצדורה
@@ -975,10 +988,100 @@ namespace ReportGenerator.Core.Data
             }
             catch (Exception ex)
             {
-                _errorManager.LogWarning(
-                    ErrorCode.Parameters_Missing,
-                    $"שגיאה בהסקת פרמטרים: {ex.Message}",
-                    ex);
+                SimpleLogger.LogWarning($"שגיאה בהסקת פרמטרים: {ex.Message}",ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// הרצת פרוצדורה מאוחסנת וקבלת התוצאות כטבלה עם תמיכה בפרמטרים אופציונליים
+        /// </summary>
+        /// <param name="spName">שם הפרוצדורה</param>
+        /// <param name="parameters">פרמטרים</param>
+        /// <returns>טבלת נתונים עם התוצאות</returns>
+        private async Task<DataTable> ExecuteStoredProcedure(string spName, Dictionary<string, ParamValue> parameters)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                // שליפת מידע על הפרמטרים שהפרוצדורה מקבלת
+                var procParams = await GetProcedureParameters(spName);
+
+                var dynamicParams = new DynamicParameters();
+
+                foreach (var procParam in procParams)
+                {
+                    string paramName = procParam.Name;
+                    if (paramName.StartsWith("@"))
+                        paramName = paramName.Substring(1); // הסרת @ מתחילת השם
+
+                    // חיפוש case-insensitive של הפרמטר
+                    ParamValue paramValue = null;
+                    string foundKey = null;
+
+                    // עבור על כל הפרמטרים שהועברו ובדוק השוואה case-insensitive
+                    foreach (var kvp in parameters)
+                    {
+                        string cleanKey = kvp.Key.TrimStart('@'); // הסר @ גם מהפרמטר שהועבר
+
+                        if (string.Equals(paramName, cleanKey, StringComparison.OrdinalIgnoreCase))
+                        {
+                            paramValue = kvp.Value;
+                            foundKey = kvp.Key;
+                            break;
+                        }
+                    }
+
+                    // בדיקה אם נמצא פרמטר תואם
+                    if (paramValue != null)
+                    {
+                        // המרת JsonElement לסוג הנכון לפני העברה לפרוצדורה
+                        object convertedValue = ConvertJsonElementToSqlType(paramValue.Value, paramValue.Type);
+
+                        dynamicParams.Add(
+                            procParam.Name, // שם הפרמטר כפי שמוגדר בפרוצדורה
+                            convertedValue,
+                            paramValue.Type);
+                    }
+                    else if (procParam.IsNullable)
+                    {
+                        // אם הפרמטר nullable (יכול לקבל NULL) - הוסף אותו עם ערך NULL
+                        dynamicParams.Add(
+                            procParam.Name,
+                            DBNull.Value,
+                            DbType.String); // סוג ברירת מחדל
+                    }
+                    else
+                    {
+                        // רק אם הפרמטר הוא חובה ולא nullable - זרוק שגיאה
+                        SimpleLogger.LogError($"פרמטר חובה {procParam.Name} חסר עבור פרוצדורה {spName}");
+                        throw new ArgumentException($"Missing required parameter {procParam.Name} for stored procedure {spName}");
+                    }
+                }
+
+                // הרצת הפרוצדורה עם הפרמטרים המתאימים בלבד
+                var result = await connection.QueryAsync(
+                    spName,
+                    dynamicParams,
+                    commandType: CommandType.StoredProcedure);
+
+                return ToDataTable(result);
+            }
+            catch (SqlException ex)
+            {
+                SimpleLogger.LogError($"שגיאת SQL בהרצת פרוצדורה {spName}", ex);
+                throw;
+            }
+            catch (ArgumentException ex)
+            {
+                // כבר נרשמה שגיאה בבדיקת הפרמטרים, רק זרוק הלאה
+                throw;
+            }
+            catch (Exception ex)
+            {
+                SimpleLogger.LogError($"שגיאת התחברות או הרצה של פרוצדורה {spName}", ex);
+                throw;
             }
         }
 
